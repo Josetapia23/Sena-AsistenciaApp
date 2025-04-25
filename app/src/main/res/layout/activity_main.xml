@@ -1,0 +1,317 @@
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".about">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <include
+            android:id="@+id/my_toolbar"
+            layout="@layout/toolbar"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/my_toolbar">
+
+            <!-- Tipo de Documento -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilTipoDocumento"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvTipoDocumento"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Tipo de Documento"
+                    android:inputType="none"
+                    android:text="CC" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Identificación -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilDocumentID1"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvDocumentID"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Número de Identificación"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Apellidos -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilApellidos"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvApellidos"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Apellidos"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Nombres -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilNombres"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvNombres"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Nombres"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Fecha de Nacimiento -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilFechaNacimiento"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvFechaNacimiento"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Fecha de Nacimiento"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Edad -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilEdad"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvEdad"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Edad"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Género -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilGenero"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvGenero"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Género"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Tipo de Sangre -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilTipoSangre"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvTipoSangre"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Tipo de Sangre"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Nacionalidad -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilNacionalidad"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvNacionalidad"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:hint="Nacionalidad"
+                    android:text="Colombiana"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Correo Electrónico -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tvCorreoEle1"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/editCorreo"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:hint="Correo Electrónico"
+                    android:inputType="textEmailAddress"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Teléfono de Contacto -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tvTelefono1"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvTelefono"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:hint="Teléfono de Contacto"
+                    android:inputType="number"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Dirección -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilDireccion"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvDireccion"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:hint="Dirección"
+                    android:inputType="textPostalAddress"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="25dp" />
+
+            <!-- Botón Siguiente -->
+            <Button
+                android:id="@+id/Siguiente"
+                android:layout_width="268dp"
+                android:layout_height="66dp"
+                android:layout_gravity="center"
+                android:foregroundGravity="center"
+                android:gravity="center"
+                android:text="Registrar Asistencia" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

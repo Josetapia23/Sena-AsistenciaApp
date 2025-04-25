@@ -1,0 +1,100 @@
+<resources>
+    <string name="app_name">SENA ASISTENCIA</string>
+    <string name="primernombre">Nombre</string>
+    <string name="segundoNombre">Nombre</string>
+    <string name="apellido">Apellido</string>
+    <string name="segundoapellidod">Apellido</string>
+    <string name="identificacion">Identificacion</string>
+    <string name="genero">Genero</string>
+    <string name="rh">Tipo de Sangre</string>
+    <string name="fechanacimiento">Fecha de Nacimiento </string>
+    <string name="temperatura">Temperatura</string>
+    <string name="btnscan">Scanner</string>
+    <string name="agregardispositivo">Agregar Dispositivo Bluetooth</string>
+    <string name="acercade">Digitalizar</string>
+    <string name="basedatos">Base de Datos</string>
+
+
+    <string-array name="spinner_items">
+        <item></item>
+        <item>Afrocolombiano</item>
+        <item>Desplazamiento de la violencia y/o victima de la violencia</item>
+        <item>Condición de discapacidad</item>
+        <item>Pueblo Rom</item>
+        <item>Palenquero</item>
+        <item>Participante del programa de la ARN</item>
+        <item>Raizales</item>
+        <item>Victima de minas anti personas</item>
+        <item>Población indígena</item>
+        <item>Otro</item>
+        <item>No pertenezco a Ningún grupo</item>
+    </string-array>
+
+    <string-array name="spinner_items2">
+        <item></item>
+        <item>Auditiva</item>
+        <item>Cognitiva</item>
+        <item>Fisica</item>
+        <item>Multiple</item>
+        <item>Psicosocial</item>
+        <item>Sordo Segura</item>
+        <item>Visual</item>
+        <item>Ninguna</item>
+    </string-array>
+
+    <string-array name="spinner_items3">
+        <item></item>
+        <item>Aprendiz o egresado del SENA de formacion titulada</item>
+        <item>Profesional universitario</item>
+        <item>Técnologo profesional o Técnologo</item>
+        <item>Especializacion, Maestria, Doctorado</item>
+        <item>Aprendiz o egresado SENA SER (SENA Emprende Rural)</item>
+        <item>Estudiante universitario en dos ultimos semestres</item>
+        <item>Aprendiz empirico (No tiene formación)</item>
+
+    </string-array>
+
+    <string-array name="spinner_items4">
+        <item></item>
+        <item>FORMACION</item>
+        <item>CERTIFICACION POR COMPETENCIAS</item>
+        <item>EMPRENDIMIENTO</item>
+        <item>CONSULTORIA EMPRESARIAL - EXTENSIONISMO</item>
+        <item>TECNOPARQUE</item>
+    </string-array>
+
+    <string-array name="spinner_items5">
+        <item></item>
+        <item>si</item>
+        <item>no</item>
+    </string-array>
+
+    <string-array name="Municipio">
+        <item></item>
+        <item>BARRANQUILLA</item>
+        <item>BARANOA</item>
+        <item>CAMPO DE LA CRUZ</item>
+        <item>CANDELARIA</item>
+        <item>GALAPA</item>
+        <item>JUAN DE ACOSTA</item>
+        <item>LURUACO</item>
+        <item>MALAMBO</item>
+        <item>MANATI</item>
+        <item>PALMAR DE VARELA</item>
+        <item>PIOJO</item>
+        <item>POLONUEVO</item>
+        <item>PONEDERA</item>
+        <item>PUERTO COLOMBIA</item>
+        <item>REPELON</item>
+        <item>SABANAGRANDE</item>
+        <item>SABANALARGA</item>
+        <item>SANTA LUCIA</item>
+        <item>SANTO TOMAS</item>
+        <item>SOLEDAD</item>
+        <item>SUAN</item>
+        <item>TUBARA</item>
+        <item>USIACURI</item>
+    </string-array>
+
+
+</resources>

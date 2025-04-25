@@ -1,0 +1,39 @@
+<resources>
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorMorad</item>
+        <item name="colorPrimaryDark">@color/colorMorad</item>
+        <item name="colorAccent">@color/colorMorad</item>
+    </style>
+    <style name="splash_screen" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_screen
+
+        </item>
+    </style>
+
+    <style name="Widget.App.Spinner" parent="Widget.AppCompat.Spinner">
+        <!-- Cambia los colores de fondo y texto del Spinner -->
+        <item name="android:textColor">@color/colorMorado</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+
+
+    <style name="Widget.App.Button" parent="Widget.AppCompat.Button">
+        <!-- Cambia el color de fondo del botón -->
+        <item name="android:background">@color/colorMorad</item>
+        <!-- Cambia el color del texto del botón -->
+        <item name="android:textColor">@android:color/white</item>
+        <!-- Agrega un padding para un aspecto más moderno -->
+        <item name="android:padding">12dp</item>
+        <!-- Establece la esquina redondeada para un aspecto más moderno -->
+        <item name="android:radius">4dp</item>
+    </style>
+
+    <style name="MyTextViewStyle" parent="Widget.MaterialComponents.TextInputEditText.OutlinedBox">
+        <!-- Agrega cualquier otro atributo que desees para personalizar el TextView -->
+    </style>
+
+
+
+</resources>
