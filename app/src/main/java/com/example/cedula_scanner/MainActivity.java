@@ -167,14 +167,24 @@ public class MainActivity extends AppCompatActivity {
         if (barcode != null) {
             String primerApellido = "", segundoApellido = "", primerNombre = "", segundoNombre = "",
                     cedula = "", rh = "", fechaNacimiento = "", sexo = "", edad = "";
+            String tipoDocumento = "CC"; // Valor predeterminado
 
             // Limpiar el código de barras y dividirlo en partes
-            String alphaAndDigits = barcode.replaceAll("[^\\p{Alpha}\\p{Digit}\\+\\_]+", " ");
+            String alphaAndDigits = barcode.replaceAll("[^\\p{Alpha}\\p{Digit}\\+\\_\\-]+", " ");
             String[] splitStr = alphaAndDigits.split("\\s+");
 
             // Imprimir todas las partes del código para análisis
             for (int i = 0; i < splitStr.length; i++) {
                 Log.d("BARCODE_PART", "Parte " + i + ": " + splitStr[i]);
+            }
+
+            // Detectar si es una TI o una CC
+            if (barcode.startsWith("I")) {
+                tipoDocumento = "TI"; // Es una Tarjeta de Identidad
+                Log.d("DOCUMENTO_TIPO", "Detectado tipo: TI");
+            } else {
+                tipoDocumento = "CC"; // Es una Cédula de Ciudadanía
+                Log.d("DOCUMENTO_TIPO", "Detectado tipo: CC");
             }
 
             // Procesar el código de barras según su formato
@@ -190,7 +200,15 @@ public class MainActivity extends AppCompatActivity {
                         lastCapitalIndex = match.start();
                     }
 
-                    cedula = splitStr[2 + corrimiento].substring(lastCapitalIndex - 10, lastCapitalIndex);
+                    // Extraer número de documento según el tipo
+                    if (tipoDocumento.equals("CC")) {
+                        // Para cédulas (10 dígitos)
+                        cedula = splitStr[2 + corrimiento].substring(lastCapitalIndex - 10, lastCapitalIndex);
+                    } else {
+                        // Para TI (longitud variable, buscar el número en el código completo)
+                        cedula = extraerNumeroTI(barcode, splitStr);
+                    }
+
                     primerApellido = splitStr[2 + corrimiento].substring(lastCapitalIndex);
                     segundoApellido = splitStr[3 + corrimiento];
                     primerNombre = splitStr[4 + corrimiento];
@@ -201,8 +219,8 @@ public class MainActivity extends AppCompatActivity {
                         segundoNombre = splitStr[5 + corrimiento];
                     }
 
-                    sexo = splitStr[6 + corrimiento];
-                    rh = splitStr[6 + corrimiento].substring(splitStr[6 + corrimiento].length() - 2);
+                    sexo = splitStr[6 + corrimiento].contains("M") ? "Masculino" : "Femenino";
+                    rh = obtenerTipoSangre(barcode, splitStr, 6 + corrimiento);
                     fechaNacimiento = splitStr[6 + corrimiento].substring(2, 10);
                 } else {
                     // Formato nuevo de cédula (con PubDSK)
@@ -212,47 +230,92 @@ public class MainActivity extends AppCompatActivity {
                         corrimiento--;
                     }
 
-                    Matcher match = pat.matcher(splitStr[3 + corrimiento]);
-                    int lastCapitalIndex = -1;
-                    if (match.find()) {
-                        lastCapitalIndex = match.start();
-                    }
+                    // Para documentos PubDSK
+                    if (tipoDocumento.equals("TI")) {
+                        // Extraer el número de la TI
+                        cedula = extraerNumeroTI(barcode, splitStr);
 
-                    cedula = splitStr[3 + corrimiento].substring(lastCapitalIndex - 10, lastCapitalIndex);
-                    primerApellido = splitStr[3 + corrimiento].substring(lastCapitalIndex);
-                    segundoApellido = splitStr[4 + corrimiento];
+                        // Extraer el resto de la información
+                        try {
+                            // Para TI, los apellidos y nombres pueden estar en posiciones diferentes
+                            primerApellido = splitStr[3];
+                            segundoApellido = splitStr[4];
+                            primerNombre = splitStr[5];
+                            segundoNombre = splitStr[6];
 
-                    if (splitStr[5 + corrimiento].startsWith("0")) { // UN NOMBRE UN APELLIDO
-                        segundoApellido = " ";
-                        primerNombre = splitStr[4 + corrimiento];
-                        sexo = splitStr[5 + corrimiento].contains("M") ? "Masculino" : "Femenino";
-                        rh = splitStr[5 + corrimiento].substring(splitStr[5 + corrimiento].length() - 2);
-                        fechaNacimiento = splitStr[5 + corrimiento].substring(2, 10);
-                    } else if (splitStr[6 + corrimiento].startsWith("0")) { // DOS APELLIDOS UN NOMBRE
-                        primerNombre = splitStr[5 + corrimiento];
-                        segundoNombre = " ";
-                        sexo = splitStr[6 + corrimiento].contains("M") ? "Masculino" : "Femenino";
-                        rh = splitStr[6 + corrimiento].substring(splitStr[6 + corrimiento].length() - 2);
-                        fechaNacimiento = splitStr[6 + corrimiento].substring(2, 10);
-                    } else { // DOS APELLIDOS DOS NOMBRES
-                        primerNombre = splitStr[5 + corrimiento];
-                        segundoNombre = splitStr[6 + corrimiento];
-                        sexo = splitStr[7 + corrimiento].contains("M") ? "Masculino" : "Femenino";
-                        rh = splitStr[7 + corrimiento].substring(splitStr[7 + corrimiento].length() - 2);
-                        fechaNacimiento = splitStr[7 + corrimiento].substring(2, 10);
+                            // La información de sexo, fecha nacimiento y RH estará en parte 7
+                            String infoParte = splitStr[7];
+                            if (infoParte.contains("M")) {
+                                sexo = "Masculino";
+                            } else if (infoParte.contains("F")) {
+                                sexo = "Femenino";
+                            }
+
+                            // Extraer fecha de nacimiento (si sigue el mismo patrón)
+                            // Formato nuevo PubDSK: YYYYMMDD para TI
+                            if (infoParte.length() >= 10) {
+                                fechaNacimiento = infoParte.substring(2, 10);
+                            }
+
+                            // Tipo de sangre
+                            rh = obtenerTipoSangre(barcode, splitStr, 7);
+                        } catch (Exception e) {
+                            Log.e("TI_PARSE_ERROR", "Error procesando datos de TI: " + e.getMessage());
+                        }
+                    } else {
+                        // Código existente para CC
+                        Matcher match = pat.matcher(splitStr[3 + corrimiento]);
+                        int lastCapitalIndex = -1;
+                        if (match.find()) {
+                            lastCapitalIndex = match.start();
+                        }
+
+                        cedula = splitStr[3 + corrimiento].substring(lastCapitalIndex - 10, lastCapitalIndex);
+                        primerApellido = splitStr[3 + corrimiento].substring(lastCapitalIndex);
+                        segundoApellido = splitStr[4 + corrimiento];
+
+                        if (splitStr[5 + corrimiento].startsWith("0")) { // UN NOMBRE UN APELLIDO
+                            segundoApellido = " ";
+                            primerNombre = splitStr[4 + corrimiento];
+                            sexo = splitStr[5 + corrimiento].contains("M") ? "Masculino" : "Femenino";
+                            rh = obtenerTipoSangre(barcode, splitStr, 5 + corrimiento);
+                            fechaNacimiento = splitStr[5 + corrimiento].substring(2, 10);
+                        } else if (splitStr[6 + corrimiento].startsWith("0")) { // DOS APELLIDOS UN NOMBRE
+                            primerNombre = splitStr[5 + corrimiento];
+                            segundoNombre = " ";
+                            sexo = splitStr[6 + corrimiento].contains("M") ? "Masculino" : "Femenino";
+                            rh = obtenerTipoSangre(barcode, splitStr, 6 + corrimiento);
+                            fechaNacimiento = splitStr[6 + corrimiento].substring(2, 10);
+                        } else { // DOS APELLIDOS DOS NOMBRES
+                            primerNombre = splitStr[5 + corrimiento];
+                            segundoNombre = splitStr[6 + corrimiento];
+                            sexo = splitStr[7 + corrimiento].contains("M") ? "Masculino" : "Femenino";
+                            rh = obtenerTipoSangre(barcode, splitStr, 7 + corrimiento);
+                            fechaNacimiento = splitStr[7 + corrimiento].substring(2, 10);
+                        }
                     }
                 }
 
                 // Calcular edad a partir de la fecha de nacimiento
                 if (fechaNacimiento != null && !fechaNacimiento.isEmpty()) {
                     try {
-                        // Formatear fecha: ddMMyyyy a yyyy-MM-dd
-                        String fechaFormateada = "20" + fechaNacimiento.substring(4, 6) + "-" +
-                                fechaNacimiento.substring(2, 4) + "-" +
-                                fechaNacimiento.substring(0, 2);
-                        Log.d("CEDULA_DATA", "Fecha formateada: " + fechaFormateada);
+                        String fechaFormateada;
 
-                        // Calcular edad
+                        if (!alphaAndDigits.contains("PubDSK")) {
+                            // Formato antiguo: DDMMYY -> yyyy-MM-dd
+                            fechaFormateada = "20" + fechaNacimiento.substring(4, 6) + "-" +
+                                    fechaNacimiento.substring(2, 4) + "-" +
+                                    fechaNacimiento.substring(0, 2);
+                        } else {
+                            // Formato nuevo PubDSK: YYYYMMDD -> yyyy-MM-dd
+                            fechaFormateada = fechaNacimiento.substring(0, 4) + "-" +
+                                    fechaNacimiento.substring(4, 6) + "-" +
+                                    fechaNacimiento.substring(6, 8);
+                        }
+
+                        Log.d("CEDULA_DATA", "Fecha formateada para cálculo: " + fechaFormateada);
+
+                        // Calcular edad con la fecha correctamente formateada
                         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                         Date fechaNac = sdf.parse(fechaFormateada);
                         Calendar dob = Calendar.getInstance();
@@ -279,10 +342,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("CEDULA_DATA", "Fecha Nacimiento: " + fechaNacimiento);
                 Log.d("CEDULA_DATA", "RH: " + rh);
                 Log.d("CEDULA_DATA", "Edad: " + edad);
+                Log.d("CEDULA_DATA", "Tipo Documento: " + tipoDocumento);
 
                 // Formatear fecha para mostrar
                 String fechaMostrar = "";
-                if (fechaNacimiento.length() >= 8) {
+                String fechaParaServidor = fechaNacimiento; // Guardar el valor original para cálculos
+
+                if (fechaNacimiento != null && fechaNacimiento.length() >= 8) {
                     try {
                         String dia, mes, anio;
 
@@ -298,16 +364,20 @@ public class MainActivity extends AppCompatActivity {
                             dia = fechaNacimiento.substring(6, 8);
                         }
 
-                        // Formato para mostrar al usuario
+                        // Formato para mostrar al usuario (dd/mm/yyyy)
                         fechaMostrar = dia + "/" + mes + "/" + anio;
 
-                        // El formato de fecha para enviar al servidor debe ser consistente
-                        fechaNacimiento = fechaMostrar; // Mantener formato dd/mm/yyyy para enviar al servidor
+                        // Para enviar al servidor
+                        fechaParaServidor = fechaMostrar;
+
+                        Log.d("FECHA_DEBUG", "Fecha original: " + fechaNacimiento);
+                        Log.d("FECHA_DEBUG", "Fecha formateada: " + fechaMostrar);
                     } catch (Exception e) {
                         Log.e("PARSE_ERROR", "Error formateando fecha: " + e.getMessage());
-                        fechaMostrar = fechaNacimiento;
+                        fechaMostrar = fechaNacimiento; // En caso de error, usar el original
                     }
                 }
+
                 // Nombres y apellidos completos
                 String nombresCompletos = primerNombre;
                 if (segundoNombre != null && !segundoNombre.trim().isEmpty() && !segundoNombre.equals(" ")) {
@@ -327,8 +397,8 @@ public class MainActivity extends AppCompatActivity {
                 tvFechaNacimiento.setText(fechaMostrar);
                 tvTipoSangre.setText(rh);
                 tvEdad.setText(edad);
-                tvTipoDocumento.setText("CC"); // Por defecto para cédulas colombianas
-                tvNacionalidad.setText("Colombiana"); // Por defecto
+                tvTipoDocumento.setText(tipoDocumento); // Ahora usamos el tipo detectado
+                tvNacionalidad.setText("COLOMBIANA"); // Por defecto
 
             } catch (Exception e) {
                 Log.e("PARSE_ERROR", "Error procesando código de barras: " + e.getMessage());
@@ -337,6 +407,134 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.d("TAG", "No se capturó ningún código de barras");
         }
+    }
+
+    // Método para extraer el número de TI
+    private String extraerNumeroTI(String barcode, String[] splitStr) {
+        // Para TI el formato puede variar, primero buscamos en la parte 2
+        String cedula = "";
+
+        try {
+            // Buscar un patrón de dígitos largos en la parte 2 (común en TI)
+            String parte2 = splitStr[2];
+            Pattern patronNumerico = Pattern.compile("\\d{8,}");
+            Matcher matcher = patronNumerico.matcher(parte2);
+
+            if (matcher.find()) {
+                // Extraer el número de la TI
+                cedula = matcher.group();
+                Log.d("TI_NUMBER", "Número TI extraído de parte 2: " + cedula);
+                return cedula;
+            }
+
+            // Si no se encuentra en la parte 2, buscamos en todo el código de barras
+            matcher = patronNumerico.matcher(barcode);
+            while (matcher.find()) {
+                String posibleNumero = matcher.group();
+                if (posibleNumero.length() >= 10) {
+                    cedula = posibleNumero;
+                    Log.d("TI_NUMBER", "Número TI extraído del código completo: " + cedula);
+                    return cedula;
+                }
+            }
+
+            // Si aún no encontramos, extraemos de la parte 2 con una estrategia diferente
+            // Buscar cualquier secuencia de dígitos
+            for (int i = 2; i < Math.min(5, splitStr.length); i++) {
+                parte2 = splitStr[i];
+                for (int j = 0; j < parte2.length(); j++) {
+                    if (Character.isDigit(parte2.charAt(j))) {
+                        int start = j;
+                        while (j < parte2.length() && Character.isDigit(parte2.charAt(j))) {
+                            j++;
+                        }
+                        String numero = parte2.substring(start, j);
+                        if (numero.length() >= 8) {
+                            cedula = numero;
+                            Log.d("TI_NUMBER", "Número TI extraído con estrategia alternativa: " + cedula);
+                            return cedula;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("TI_EXTRACT_ERROR", "Error al extraer número de TI: " + e.getMessage());
+        }
+
+        // Si todo falla, extraemos los primeros 10 dígitos encontrados en el código
+        StringBuilder digits = new StringBuilder();
+        for (char c : barcode.toCharArray()) {
+            if (Character.isDigit(c)) {
+                digits.append(c);
+                if (digits.length() >= 10) break;
+            }
+        }
+
+        if (digits.length() > 0) {
+            cedula = digits.toString();
+            Log.d("TI_NUMBER", "Número TI extraído como último recurso: " + cedula);
+        } else {
+            cedula = "0000000000"; // Valor por defecto si no se puede extraer
+            Log.d("TI_NUMBER", "No se pudo extraer número de TI, usando valor por defecto");
+        }
+
+        return cedula;
+    }
+
+    // Método auxiliar para extraer el tipo de sangre
+    private String obtenerTipoSangre(String barcode, String[] splitStr, int index) {
+        // Verificar si el código de barras completo contiene patrones específicos de tipo de sangre
+        if (barcode.contains("B-")) return "B-";
+        if (barcode.contains("B+")) return "B+";
+        if (barcode.contains("O-")) return "O-";
+        if (barcode.contains("O+")) return "O+";
+        if (barcode.contains("A-")) return "A-";
+        if (barcode.contains("A+")) return "A+";
+        if (barcode.contains("AB-")) return "AB-";
+        if (barcode.contains("AB+")) return "AB+";
+
+        // Si no se encuentra un patrón directo, tratar de construirlo
+        String parte = splitStr[index];
+        // Buscar la última letra que podría ser un tipo de sangre (O, A, B)
+        char letraSangre = 'O'; // Por defecto
+
+        // Buscar desde el final hacia atrás para encontrar O, A o B
+        for (int i = parte.length() - 1; i >= 0; i--) {
+            char c = parte.charAt(i);
+            if (c == 'O' || c == 'A' || c == 'B') {
+                letraSangre = c;
+                break;
+            }
+        }
+
+        // Determinar el signo (+ o -) basado en varias estrategias
+        String signo = "+"; // Por defecto es positivo
+
+        // Estrategia 1: Buscar literal "B-" o similar en el código completo
+        if ((letraSangre == 'B' && barcode.contains("B-")) ||
+                (letraSangre == 'O' && barcode.contains("O-")) ||
+                (letraSangre == 'A' && barcode.contains("A-"))) {
+            signo = "-";
+        }
+
+        // Estrategia 2: Buscar el signo en el código de barras cerca de la letra
+        int posLetra = barcode.indexOf(letraSangre);
+        if (posLetra >= 0 && posLetra + 1 < barcode.length()) {
+            char nextChar = barcode.charAt(posLetra + 1);
+            if (nextChar == '-' || nextChar == '+') {
+                signo = String.valueOf(nextChar);
+            }
+        }
+
+        // Log para ayudar a diagnosticar
+        Log.d("TIPO_SANGRE", "Letra encontrada: " + letraSangre + ", Signo determinado: " + signo);
+
+        return String.valueOf(letraSangre) + signo;
+    }
+
+    // Método auxiliar para verificar si un carácter es una letra de tipo de sangre
+    private boolean esLetraTipoSangre(char c) {
+        return c == 'O' || c == 'A' || c == 'B';
     }
 
     private void insertarAsistencia(String idEvento) {
@@ -397,7 +595,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "http://192.168.1.117/AsistenciaApi/insertarCedulaSc.php";
+        String url = "http://192.168.1.106/AsistenciaApi/insertarCedulaSc.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {

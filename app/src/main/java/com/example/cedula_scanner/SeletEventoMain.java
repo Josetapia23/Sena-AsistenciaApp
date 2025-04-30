@@ -88,7 +88,7 @@ public class SeletEventoMain extends AppCompatActivity {
     }
 
     private void cargarEventos(){
-        String url = "http://192.168.1.117/AsistenciaApi/eventoSena.php";
+        String url = "http://192.168.1.106/AsistenciaApi/eventoSena.php";
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {

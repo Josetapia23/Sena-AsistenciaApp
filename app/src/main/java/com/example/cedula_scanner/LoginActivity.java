@@ -50,7 +50,7 @@ public class LoginActivity extends AppCompatActivity {
     }
     private void loginUser(final String username, final String password) {
 
-        String url = "http://192.168.1.117/AsistenciaApi/login.php";
+        String url = "http://192.168.1.106/AsistenciaApi/login.php";
 
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,

@@ -283,17 +283,19 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilDireccion"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="344dp"
-                android:layout_height="wrap_content">
+                android:layout_width="320dp"
+                android:layout_height="60dp"
+                android:layout_marginHorizontal="16dp">
 
-                <EditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/tvDireccion"
-                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
-                    android:layout_width="320dp"
-                    android:layout_height="60dp"
-                    android:layout_marginLeft="10dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:hint="Dirección"
-                    android:inputType="textPostalAddress"
+                    android:inputType="textMultiLine|textPostalAddress"
+                    android:minLines="1"
+                    android:maxLines="2"
+                    android:digits="abcdefghijklmnñopqrstuvwxyzABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789 -#.,:;/()áéíóúÁÉÍÓÚ"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
 

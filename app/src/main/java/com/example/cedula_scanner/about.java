@@ -1,8 +1,9 @@
 package com.example.cedula_scanner;
 
-import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -12,6 +13,8 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
@@ -33,82 +36,145 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
+public class about extends AppCompatActivity {
 
-public class about extends AppCompatActivity{
-
-    EditText tvFirstName;
-    EditText tvSecondName;
-    EditText tvLastName;
-    EditText tvSecondLastName;
-    EditText tvDocumentID;
-    EditText tvGender;
-    EditText tvDate;
-    EditText tvRH, tvNumeroFicha,tvProgrmaformacion, tvjordanaFormacion, tvModFormacion, tvnivelFormacion, tvCentroFormacion, editCorreo, tvTelefono;
-
-    RadioGroup radioGroupGenero;
-    RadioGroup radioGroupTipoDocumento;
+    // Referencias a los campos de la UI
+    private EditText tvDocumentID, tvNombres, tvApellidos, tvFechaNacimiento;
+    private EditText tvEdad, tvNacionalidad, editCorreo, tvTelefono, tvDireccion;
+    private AutoCompleteTextView tvGenero, tvTipoSangre;
+    private RadioGroup rgTipoDocumento;
+    private RadioButton rbCC, rbTI, rbEX;
+    private Button btnRegistrar;
     private Toolbar toolbar;
+    private Calendar calendar;
 
-    Button btn;
-    Calendar calendar;
-
-    @SuppressLint({"WrongViewCast", "MissingInflatedId"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_acercade);
+        setContentView(R.layout.activity_digitalizable);
 
-        tvFirstName = findViewById(R.id.tvFirstName1);
-        //tvSecondName = findViewById(R.id.tvSecondName1);
-        tvLastName = findViewById(R.id.tvLastName1);
-        //tvSecondLastName = findViewById(R.id.tvSecondLastName1);
-        tvDocumentID = findViewById(R.id.tvDocumentID1);
-        //tvDate = findViewById(R.id.tvDate1);
-        //tvRH = findViewById(R.id.tvRH1);
-
-        radioGroupGenero = findViewById(R.id.radioGroupGenero);
-        radioGroupTipoDocumento = findViewById(R.id.radioGroupTipoDocumento);
-
-        btn = findViewById(R.id.Siguiente);
+        // Inicializar el calendario
         calendar = Calendar.getInstance();
 
-        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
-        String idEvento = prefs.getString("idEvento", null);
-        btn = findViewById(R.id.Siguiente);
-        btn.setOnClickListener(view -> insertar(idEvento));
-        View btnConsultar = findViewById(R.id.consultarAprendiz);
-        btnConsultar.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                consultarAprendiz(idEvento);
-            }
-        });
-        tvProgrmaformacion = findViewById(R.id.tvProgrmaformacion);
-        tvNumeroFicha = findViewById(R.id.tvNumeroFicha);
-        tvjordanaFormacion = findViewById(R.id.tvjordanaFormacion);
-        tvModFormacion = findViewById(R.id.tvModFormacion);
-        tvnivelFormacion = findViewById(R.id.tvnivelFormacion);
-        tvCentroFormacion = findViewById(R.id.tvCentroFormacion);
+        // Inicializar las referencias a la UI
+        tvDocumentID = findViewById(R.id.tvDocumentID);
+        tvNombres = findViewById(R.id.tvNombres);
+        tvApellidos = findViewById(R.id.tvApellidos);
+        tvGenero = findViewById(R.id.tvGenero);
+        tvFechaNacimiento = findViewById(R.id.tvFechaNacimiento);
+        tvTipoSangre = findViewById(R.id.tvTipoSangre);
+        tvEdad = findViewById(R.id.tvEdad);
+        tvNacionalidad = findViewById(R.id.tvNacionalidad);
         editCorreo = findViewById(R.id.editCorreo);
         tvTelefono = findViewById(R.id.tvTelefono);
+        tvDireccion = findViewById(R.id.tvDireccion);
+        rgTipoDocumento = findViewById(R.id.rgTipoDocumento);
+        rbCC = findViewById(R.id.rbCC);
+        rbTI = findViewById(R.id.rbTI);
+        rbEX = findViewById(R.id.rbEX);
 
+        // Configurar desplegables
+        setupDropdowns();
 
+        // Configurar selector de fecha
+        setupDatePicker();
+
+        // Obtener ID del evento de las preferencias
+        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        final String idEvento = prefs.getString("idEvento", null);
+        final String idSubevento = prefs.getString("idSubevento", null);
+
+        // Configurar botón de registro
+        btnRegistrar = findViewById(R.id.Siguiente);
+        btnRegistrar.setOnClickListener(view -> insertarAsistencia(idEvento));
+
+        // Configurar toolbar
         setUpToolbar();
         Toolbar toolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(toolbar);
 
-
-
+        // Configuración para permitir operaciones de red en el hilo principal (no recomendado en producción)
         if (android.os.Build.VERSION.SDK_INT > 9) {
             StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
             StrictMode.setThreadPolicy(policy);
         }
     }
 
+    // Configurar los desplegables de género y tipo de sangre
+    private void setupDropdowns() {
+        // Configurar opciones de género
+        String[] opcionesGenero = {"Masculino", "Femenino", "Otro"};
+        ArrayAdapter<String> generoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, opcionesGenero);
+        tvGenero.setAdapter(generoAdapter);
+
+        // Configurar opciones de tipo de sangre
+        String[] opcionesTipoSangre = {"O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"};
+        ArrayAdapter<String> tipoSangreAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, opcionesTipoSangre);
+        tvTipoSangre.setAdapter(tipoSangreAdapter);
+    }
+
+    // Configurar selector de fecha con DatePickerDialog
+    private void setupDatePicker() {
+        tvFechaNacimiento.setOnClickListener(v -> {
+            DatePickerDialog datePickerDialog = new DatePickerDialog(
+                    about.this,
+                    new DatePickerDialog.OnDateSetListener() {
+                        @Override
+                        public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                            // Actualizar el calendario
+                            calendar.set(Calendar.YEAR, year);
+                            calendar.set(Calendar.MONTH, month);
+                            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+                            // Actualizar el campo de texto con la fecha seleccionada
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                            tvFechaNacimiento.setText(dateFormat.format(calendar.getTime()));
+
+                            // Calcular y actualizar la edad automáticamente
+                            actualizarEdad();
+                        }
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+            );
+
+            // Establecer el límite máximo como el año actual
+            datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+
+            datePickerDialog.show();
+        });
+    }
+
+    // Calcular la edad basada en la fecha de nacimiento
+    private void actualizarEdad() {
+        String fechaNacimiento = tvFechaNacimiento.getText().toString();
+        if (!fechaNacimiento.isEmpty()) {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                Date fechaNac = sdf.parse(fechaNacimiento);
+                Calendar dob = Calendar.getInstance();
+                Calendar today = Calendar.getInstance();
+                dob.setTime(fechaNac);
+
+                int edadCalculada = today.get(Calendar.YEAR) - dob.get(Calendar.YEAR);
+                if (today.get(Calendar.DAY_OF_YEAR) < dob.get(Calendar.DAY_OF_YEAR)) {
+                    edadCalculada--;
+                }
+                tvEdad.setText(String.valueOf(edadCalculada));
+            } catch (ParseException e) {
+                Log.e("EDAD_ERROR", "Error calculando edad: " + e.getMessage());
+            }
+        }
+    }
 
     public void setUpToolbar() {
         toolbar = findViewById(R.id.my_toolbar);
@@ -123,269 +189,183 @@ public class about extends AppCompatActivity{
     }
 
     public boolean onOptionsItemSelected(MenuItem menuItem) {
-        switch (menuItem.getItemId()) {
-            case R.id.item4:
-                Intent acerca = new Intent(this, MainActivity.class);
-                startActivity(acerca);
-                break;
-            default:
+        if (menuItem.getItemId() == R.id.item4) {
+            Intent acerca = new Intent(this, MainActivity.class);
+            startActivity(acerca);
+            return true;
         }
         return super.onOptionsItemSelected(menuItem);
     }
 
-    private void showDatePickerDialog() {
-        int year = calendar.get(Calendar.YEAR);
-        int month = calendar.get(Calendar.MONTH);
-        int day = calendar.get(Calendar.DAY_OF_MONTH);
+    private void insertarAsistencia(String idEvento) {
+        // Obtener también el ID del subevento desde SharedPreferences
+        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        String idSubevento = prefs.getString("idSubevento", null);
 
-        DatePickerDialog datePickerDialog = new DatePickerDialog(
-                this,
-                new DatePickerDialog.OnDateSetListener() {
-                    @Override
-                    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                        // Crea una Calendar con la fecha seleccionada
-                        Calendar selectedDate = Calendar.getInstance();
-                        selectedDate.set(Calendar.YEAR, year);
-                        selectedDate.set(Calendar.MONTH, month);
-                        selectedDate.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-
-                        // Actualiza el texto del EditText con la fecha seleccionada
-                        String selectedDateStr = dayOfMonth + "/" + (month + 1) + "/" + year;
-                        tvDate.setText(selectedDateStr);
-
-                        // Almacena la fecha seleccionada en la variable "calendar"
-                        calendar.set(Calendar.YEAR, year);
-                        calendar.set(Calendar.MONTH, month);
-                        calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-                    }
-                },
-                year,
-                month,
-                day
-        );
-
-        // Establece el límite máximo como el año actual
-        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
-
-        datePickerDialog.show();
-    }
-
-    // metodo para obtener datos de la cedula aprendiz
-    private void consultarAprendiz(String idEvento) {
-        EditText etDocumentID = findViewById(R.id.tvDocumentID1);
-        String documentID = etDocumentID.getText().toString().trim();
-        int tipoDocumentoId = radioGroupTipoDocumento.getCheckedRadioButtonId();
-        if (tipoDocumentoId == -1) {
-            Toast.makeText(this, "Selecciona un tipo de documento", Toast.LENGTH_SHORT).show();
+        // Verificar que tenemos ambos IDs
+        if (idEvento == null || idSubevento == null) {
+            Toast.makeText(this, "Error: No se encontraron los IDs del evento", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (documentID.isEmpty()) {
-            Toast.makeText(this, "Por favor ingrese la identificación", Toast.LENGTH_SHORT).show();
+        // Obtener tipo de documento seleccionado
+        String tipoDocumento;
+        int selectedRadioButtonId = rgTipoDocumento.getCheckedRadioButtonId();
+        if (selectedRadioButtonId == R.id.rbCC) {
+            tipoDocumento = "CC";
+        } else if (selectedRadioButtonId == R.id.rbTI) {
+            tipoDocumento = "TI";
+        } else if (selectedRadioButtonId == R.id.rbEX) {
+            tipoDocumento = "EX";
+        } else {
+            tipoDocumento = "CC"; // Valor por defecto
+        }
+
+        // Obtener valores de la UI
+        String identificacion = tvDocumentID.getText().toString().trim();
+        String nombres = tvNombres.getText().toString().trim();
+        String apellidos = tvApellidos.getText().toString().trim();
+        String fechaNacimiento = tvFechaNacimiento.getText().toString().trim();
+        String edad = tvEdad.getText().toString().trim();
+        String genero = tvGenero.getText().toString().trim();
+        String tipoSangre = tvTipoSangre.getText().toString().trim();
+        String nacionalidad = tvNacionalidad.getText().toString().trim();
+        String correo = editCorreo.getText().toString().trim();
+        String telefono = tvTelefono.getText().toString().trim();
+        String direccion = tvDireccion.getText().toString().trim();
+
+        // Validaciones
+        if (identificacion.isEmpty()) {
+            tvDocumentID.setError("Este campo es obligatorio");
             return;
         }
-        RadioButton tipoDocumentoRadioButton = findViewById(tipoDocumentoId);
-        String tipoDocumento = tipoDocumentoRadioButton.getText().toString();
-        // URL del servidor
-        //String url = "http://192.168.45.106/AsistenciaApi/consultarAprendiz.php";
-        String url = "https://asistenciasena.proyectoswork.com/api/consultarAprendiz.php";
 
-        final ProgressDialog progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Consultando...");
+        if (nombres.isEmpty()) {
+            tvNombres.setError("Este campo es obligatorio");
+            return;
+        }
+
+        if (apellidos.isEmpty()) {
+            tvApellidos.setError("Este campo es obligatorio");
+            return;
+        }
+
+        if (genero.isEmpty()) {
+            tvGenero.setError("Este campo es obligatorio");
+            return;
+        }
+
+        if (correo.isEmpty()) {
+            editCorreo.setError("Ingrese un correo electrónico");
+            return;
+        }
+
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches()) {
+            editCorreo.setError("Formato de correo inválido");
+            return;
+        }
+
+        if (telefono.isEmpty()) {
+            tvTelefono.setError("Ingrese un número de teléfono");
+            return;
+        }
+
+        if (direccion.isEmpty()) {
+            tvDireccion.setError("Ingrese una dirección");
+            return;
+        }
+
+        // Mostrar diálogo de progreso
+        ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Registrando asistencia...");
         progressDialog.show();
 
-        RequestQueue queue = Volley.newRequestQueue(this);
+        // Agregar log para depurar dirección
+        Log.d("DIRECCION_DEBUG", "Valor de dirección a enviar: " + direccion);
 
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
-            @Override
-            public void onResponse(String response) {
-                progressDialog.dismiss();
-                try {
-                    JSONObject jsonObject = new JSONObject(response);
+        // Enviar datos al servidor
+        RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+        String url = "http://192.168.1.106/AsistenciaApi/insertarCedulaSc.php";
 
-                    if (jsonObject.has("error")) {
-                        Toast.makeText(about.this, jsonObject.getString("error"), Toast.LENGTH_SHORT).show();
-                        return;
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        progressDialog.dismiss();
+                        try {
+                            JSONObject jsonResponse = new JSONObject(response);
+                            boolean success = jsonResponse.getBoolean("success");
+                            String message = jsonResponse.getString("message");
+
+                            // Mostrar alerta con el mensaje del servidor
+                            AlertDialog.Builder builder = new AlertDialog.Builder(about.this);
+                            builder.setTitle(success ? "Éxito" : "Aviso");
+                            builder.setMessage(message);
+
+                            if (success || jsonResponse.optBoolean("already_registered", false)) {
+                                // En caso de éxito o usuario ya registrado, ir a AccionesMainActivity
+                                builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        Intent intent = new Intent(about.this, AccionesMainActivity.class);
+                                        startActivity(intent);
+                                        finish();
+                                    }
+                                });
+                            } else {
+                                // En caso de error, solo cerrar el diálogo
+                                builder.setPositiveButton("Aceptar", null);
+                            }
+
+                            builder.show();
+
+                        } catch (JSONException e) {
+                            Toast.makeText(about.this, "Error al procesar la respuesta: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
                     }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        progressDialog.dismiss();
+                        String errorMessage = "Error de red";
 
-                    // Obtener los datos del JSON
-                    String apellidos = jsonObject.getString("apellidos");
-                    String nombre = jsonObject.getString("nombre");
-                    String ficha = jsonObject.getString("ficha");
-                    String programaFormacion = jsonObject.getString("programaFor");
-                    String jornadaFormacion = jsonObject.getString("jornada");
-                    String modalidadFor = jsonObject.getString("modalidad");
-                    String nivelFormacion = jsonObject.getString("nivelFormacion");
-                    String correoElectronico = jsonObject.getString("correo");
-                    String telefonoContacto = jsonObject.getString("telefono");
-                    String centroFormacion = jsonObject.getString("centroForm");
+                        if (error.networkResponse != null) {
+                            errorMessage += " (código: " + error.networkResponse.statusCode + ")";
+                        }
 
-                    // Mapear los datos a los campos de la vista
+                        // Mostrar alerta con el error
+                        AlertDialog.Builder builder = new AlertDialog.Builder(about.this);
+                        builder.setTitle("Error");
+                        builder.setMessage(errorMessage);
+                        builder.setPositiveButton("Aceptar", null);
+                        builder.show();
 
-                    ((EditText) findViewById(R.id.tvLastName1)).setText(apellidos);
-                    ((EditText) findViewById(R.id.tvFirstName1)).setText(nombre);
-                    ((EditText) findViewById(R.id.tvNumeroFicha)).setText(ficha);
-                    ((EditText) findViewById(R.id.tvProgrmaformacion)).setText(programaFormacion);
-                    ((EditText) findViewById(R.id.tvjordanaFormacion)).setText(jornadaFormacion);
-                    ((EditText) findViewById(R.id.tvModFormacion)).setText(modalidadFor);
-                    ((EditText) findViewById(R.id.tvnivelFormacion)).setText(nivelFormacion);
-                    ((EditText) findViewById(R.id.tvCentroFormacion)).setText(centroFormacion);
-                    ((EditText) findViewById(R.id.editCorreo)).setText(correoElectronico);
-                    ((EditText) findViewById(R.id.tvTelefono)).setText(telefonoContacto);
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                    Toast.makeText(about.this, "Error al procesar la respuesta", Toast.LENGTH_SHORT).show();
+                        Log.e("InsertError", error.toString());
+                    }
                 }
-            }
-        }, new Response.ErrorListener() {
+        ) {
             @Override
-            public void onErrorResponse(VolleyError error) {
-                progressDialog.dismiss();
-                Toast.makeText(about.this, "Error en la consulta", Toast.LENGTH_SHORT).show();
-                Log.e("VolleyError", error.toString());
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
+            protected Map<String, String> getParams() throws AuthFailureError {
                 Map<String, String> params = new HashMap<>();
-                params.put("cedula", documentID);
                 params.put("idEvento", idEvento);
-                params.put("tipo_doc", tipoDocumento);
+                params.put("idSubevento", idSubevento);
+                params.put("tipoDocumento", tipoDocumento);
+                params.put("cedula", identificacion);
+                params.put("nombres", nombres);
+                params.put("apellidos", apellidos);
+                params.put("fechanacimiento", fechaNacimiento);
+                params.put("edad", edad);
+                params.put("genero", genero);
+                params.put("nacionalidad", nacionalidad);
+                params.put("tiposangre", tipoSangre);
+                params.put("correo", correo);
+                params.put("celular", telefono);
+                params.put("direccion", direccion);
                 return params;
             }
         };
 
         queue.add(stringRequest);
-    }
-    public void insertar(String idEvento) {
-        int generoId = radioGroupGenero.getCheckedRadioButtonId();
-        int tipoDocumentoId = radioGroupTipoDocumento.getCheckedRadioButtonId();
-
-        if (generoId == -1) {
-            Toast.makeText(this, "Selecciona un género", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (tipoDocumentoId == -1) {
-            Toast.makeText(this, "Selecciona un tipo de documento", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        RadioButton generoRadioButton = findViewById(generoId);
-        String genero = generoRadioButton.getText().toString();
-        RadioButton tipoDocumentoRadioButton = findViewById(tipoDocumentoId);
-        String tipoDocumento = tipoDocumentoRadioButton.getText().toString();
-        String identificacion = tvDocumentID.getText().toString().trim();
-        String nombreU = tvFirstName.getText().toString().trim();
-        String apellidoU = tvLastName.getText().toString().trim();
-        String programaFor = tvProgrmaformacion.getText().toString().trim();
-        String numeroFicha = tvNumeroFicha.getText().toString().trim();
-        String jornada = tvjordanaFormacion.getText().toString().trim();
-        String modalidad = tvModFormacion.getText().toString().trim();
-        String nivelFormacion = tvnivelFormacion.getText().toString().trim();
-        String centroForma = tvCentroFormacion.getText().toString().trim();
-        String correo = editCorreo.getText().toString().trim();
-        String telefono = tvTelefono.getText().toString().trim();
-        ProgressDialog progressDialog = new ProgressDialog(this);
-
-        if (identificacion.isEmpty()) {
-            tvDocumentID.setError("Diligenciar Documento");
-            Toast.makeText(this, "Diligenciar Identificacion", Toast.LENGTH_SHORT).show();
-
-        } else if (nombreU.isEmpty()) {
-            tvFirstName.setError("Diligencia primer Nombre");
-            Toast.makeText(this, "Diligenciar Primer nombre", Toast.LENGTH_SHORT).show();
-        } else if (genero.isEmpty()) {
-            generoRadioButton.setError("Diligencia tipo Genero");
-            Toast.makeText(this, "Diligenciar tipo de genero", Toast.LENGTH_SHORT).show();
-        } else if (tipoDocumento.isEmpty()) {
-            tipoDocumentoRadioButton.setError("Selecciona tipo de documento");
-        } else if (apellidoU.isEmpty()) {
-            tvLastName.setError("Diligenciar primer apellido");
-            Toast.makeText(this, "Diligenciar Primer apellido", Toast.LENGTH_SHORT).show();
-        } else if (programaFor.isEmpty()) {
-            tvProgrmaformacion.setError("Diligenciar Programa de Formacion");
-            Toast.makeText(this, "Diligenciar Programa de Fromacion", Toast.LENGTH_SHORT).show();
-        } else if (numeroFicha.isEmpty()) {
-            tvNumeroFicha.setError("Diligenciar Numero de Ficha");
-            Toast.makeText(this, "Diligenciar Numero de Ficha", Toast.LENGTH_SHORT).show();
-        } else if (jornada.isEmpty()) {
-            tvLastName.setError("Diligenciar Jornada");
-            Toast.makeText(this, "Diligenciar Jornada", Toast.LENGTH_SHORT).show();
-        } else if (modalidad.isEmpty()) {
-            tvLastName.setError("Diligenciar Modalidad");
-            Toast.makeText(this, "Diligenciar Modalidad", Toast.LENGTH_SHORT).show();
-        } else if (nivelFormacion.isEmpty()) {
-            tvLastName.setError("Diligenciar Nivel de formación");
-            Toast.makeText(this, "Diligenciar Nivel de formación", Toast.LENGTH_SHORT).show();
-        } else if (centroForma.isEmpty()) {
-            tvLastName.setError("Diligenciar Centro de Formación");
-            Toast.makeText(this, "Centro de Formación", Toast.LENGTH_SHORT).show();
-        } else if (correo.isEmpty()){
-            editCorreo.setError("Diligencia tu correo electrónico");
-            Toast.makeText(this, "Diligenciar Correo", Toast.LENGTH_SHORT).show();
-        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches()){
-            editCorreo.setError("Formato de correo electrónico no válido");
-            Toast.makeText(this, "Formato de correo invalido", Toast.LENGTH_SHORT).show();
-        } else if (telefono.isEmpty()){
-            tvTelefono.setError("Diligenciar Numero de contacto");
-            Toast.makeText(this, "Diligenciar Numero de contacto", Toast.LENGTH_SHORT).show();
-        } else {
-            progressDialog.show();
-            RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-           // String url = "http://192.168.45.106/AsistenciaApi/digitalizable.php";
-            String url = "https://asistenciasena.proyectoswork.com/api/digitalizable.php";
-
-            StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
-                @Override
-                public void onResponse(String response) {
-                    Log.d("ServerResponse", response);
-                    if (response.equalsIgnoreCase("datos insertados")) {
-                        Toast.makeText(about.this, "Datos ingresados", Toast.LENGTH_SHORT).show();
-                        progressDialog.dismiss();
-                        Intent intent = new Intent(about.this, AccionesMainActivity.class);
-                        intent.putExtra("identificacionExtra", identificacion);
-                        startActivity(intent);
-                        finish();
-                    } else {
-                        Toast.makeText(about.this, response, Toast.LENGTH_SHORT).show();
-                        progressDialog.dismiss();
-                    }
-                }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    Toast.makeText(about.this, error.getMessage(), Toast.LENGTH_SHORT).show();
-                    progressDialog.dismiss();
-                }
-            }) {
-                protected Map<String, String> getParams() throws AuthFailureError {
-                    Map<String, String> params = new HashMap<String, String>();
-                    params.put("idEvento", idEvento);
-                    params.put("identificacion", identificacion);
-                    params.put("nombreU", nombreU);
-                    //params.put("nombreD", nombreD);
-                    params.put("apellidoU", apellidoU);
-                    //params.put("apellidoD", apellidoD);
-                    params.put("genero", genero);
-                    params.put("tipoDocumento", tipoDocumento);
-                    //params.put("fechanacimiento", fNacimiento);
-                    //params.put("tipoSangre", tipoSangre);
-
-                    params.put("programaFor",programaFor);
-                    params.put("numeroFicha", numeroFicha);
-                    params.put("jornada", jornada);
-                    params.put("modalidad", modalidad);
-                    params.put("nivelFormacion", nivelFormacion);
-                    params.put("centroForma", centroForma);
-                    params.put("correo", correo);
-                    params.put("telefono", telefono);
-                    return params;
-                }
-            };
-            RequestQueue requestQueue = Volley.newRequestQueue(about.this);
-            requestQueue.add(stringRequest);
-        }
     }
 }
