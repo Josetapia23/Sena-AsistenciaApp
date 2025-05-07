@@ -1,10 +1,15 @@
 package com.example.cedula_scanner;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -28,22 +33,116 @@ import java.util.Map;
 
 public class SeletEventoMain extends AppCompatActivity {
     private Spinner spinnerEvento;
-    private Map<String, String> subeventosIdMap; // Mapa para almacenar relación nombre-id del subevento
-    private Map<String, String> eventosIdMap; // Mapa para almacenar relación nombre-id del evento padre
+    private Map<String, String> subeventosIdMap;
+    private Map<String, String> eventosIdMap;
+    private Handler refreshHandler;
+    private Runnable refreshRunnable;
+    private static final int REFRESH_INTERVAL = 60000; // 1 minuto en milisegundos
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_selet_evento_main);
 
-        spinnerEvento = findViewById(R.id.spinnerEvento);
-        subeventosIdMap = new HashMap<>(); // Inicializar el mapa de IDs de subeventos
-        eventosIdMap = new HashMap<>(); // Inicializar el mapa de IDs de eventos padre
-        cargarEventos();
+        // Verificar si el usuario está logueado
+        checkLoginStatus();
 
-        spinnerEvento.setSelection(0);
+        // Configurar Toolbar
+        Toolbar toolbar = findViewById(R.id.my_toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Selección de Eventos");
+        }
+
+        spinnerEvento = findViewById(R.id.spinnerEvento);
+        subeventosIdMap = new HashMap<>();
+        eventosIdMap = new HashMap<>();
+
+        // Configurar actualización automática
+        refreshHandler = new Handler();
+        refreshRunnable = new Runnable() {
+            @Override
+            public void run() {
+                cargarEventos();
+                refreshHandler.postDelayed(this, REFRESH_INTERVAL);
+            }
+        };
+
+        cargarEventos();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Iniciar la actualización automática
+        refreshHandler.postDelayed(refreshRunnable, REFRESH_INTERVAL);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Detener la actualización automática
+        refreshHandler.removeCallbacks(refreshRunnable);
+    }
+
+    private void checkLoginStatus() {
+        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        boolean isLoggedIn = prefs.getBoolean("isLoggedIn", false);
+
+        if (!isLoggedIn) {
+            // Si no está logueado, redirigir al login
+            Intent intent = new Intent(SeletEventoMain.this, LoginActivity.class);
+            startActivity(intent);
+            finish();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflamos el menú que ya tienes creado
+        MenuItem logoutItem = menu.add(Menu.NONE, R.id.itemCerrarSesion, Menu.NONE, "Cerrar Sesión");
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.itemCerrarSesion) {
+            logoutUser();
+            return true;
+        } else if (id == R.id.item3) {
+            // Código para la opción "Acerca de"
+            Intent intent = new Intent(this, about.class);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.item4) {
+            // Código para la opción "Escanear"
+            // Intent intent = new Intent(this, EscanearActivity.class);
+            // startActivity(intent);
+            Toast.makeText(this, "Función de escanear no implementada", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void logoutUser() {
+        // Limpiar las preferencias de sesión
+        SharedPreferences.Editor editor = getSharedPreferences("MyPrefs", MODE_PRIVATE).edit();
+        editor.clear();
+        editor.apply();
+
+        // Redirigir al login
+        Intent intent = new Intent(SeletEventoMain.this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+
+        Toast.makeText(this, "Sesión cerrada", Toast.LENGTH_SHORT).show();
+    }
+
+    // Método del botón Continuar
     public void onClickContinuar(View view) {
         int selectedPosition = spinnerEvento.getSelectedItemPosition();
         if (selectedPosition > 0) {
@@ -88,7 +187,7 @@ public class SeletEventoMain extends AppCompatActivity {
     }
 
     private void cargarEventos(){
-        String url = "http://192.168.1.106/AsistenciaApi/eventoSena.php";
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/eventoSena.php";
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {

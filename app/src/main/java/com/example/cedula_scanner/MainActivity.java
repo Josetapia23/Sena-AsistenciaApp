@@ -15,9 +15,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -72,11 +75,11 @@ public class MainActivity extends AppCompatActivity {
         tvTelefono = findViewById(R.id.tvTelefono);
         tvDireccion = findViewById(R.id.tvDireccion);
 
+
         // Obtener ID del evento de las preferencias
         SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
         final String idEvento = prefs.getString("idEvento", null);
         final String idSubevento = prefs.getString("idSubevento", null);
-
 
         // Configurar botón de registro
         btnRegistrar = findViewById(R.id.Siguiente);
@@ -113,13 +116,56 @@ public class MainActivity extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
-    public boolean onOptionsItemSelected(MenuItem menuItem) {
-        if (menuItem.getItemId() == R.id.item3) {
-            Intent acerca = new Intent(this, about.class);
-            startActivity(acerca);
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+
+        // Añadir log para depuración
+        Log.d("MainActivity", "onOptionsItemSelected: item id = " + id);
+
+        if (id == R.id.itemCerrarSesion) {
+            Log.d("MainActivity", "Cerrando sesión");
+            // Cerrar sesión
+            SharedPreferences.Editor editor = getSharedPreferences("MyPrefs", MODE_PRIVATE).edit();
+            editor.clear();
+            editor.commit();
+
+            // Redirigir al login
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+
+            Toast.makeText(this, "Sesión cerrada", Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (id == R.id.item3) {
+            Log.d("MainActivity", "Abriendo acerca de");
+            // Código para la opción "Acerca de"
+            Intent intent = new Intent(this, about.class);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.item4) {
+            Log.d("MainActivity", "Iniciando escaneo");
+            try {
+                // Iniciar el escaneo directamente
+                IntentIntegrator integrator = new IntentIntegrator(MainActivity.this);
+                integrator.setDesiredBarcodeFormats(IntentIntegrator.PDF_417);
+                integrator.setPrompt("Acerca el código de barras de la cédula");
+                integrator.setOrientationLocked(false);
+                integrator.setBeepEnabled(true);
+                integrator.setBarcodeImageEnabled(true);
+                integrator.setTorchEnabled(false);
+                integrator.initiateScan();
+                Log.d("MainActivity", "Escaneo iniciado correctamente");
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error al iniciar escaneo: " + e.getMessage());
+                Toast.makeText(this, "Error al iniciar el escaneo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
             return true;
         }
-        return super.onOptionsItemSelected(menuItem);
+
+        Log.d("MainActivity", "No se manejó ninguna opción del menú");
+        return super.onOptionsItemSelected(item);
     }
 
     public void onClick(View view) {
@@ -595,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "http://192.168.1.106/AsistenciaApi/insertarCedulaSc.php";
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarCedulaSc.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
@@ -690,5 +736,13 @@ public class MainActivity extends AppCompatActivity {
     public void about(View view) {
         Intent about = new Intent(this, about.class);
         startActivity(about);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // Regresar a la pantalla de selección de eventos
+        Intent intent = new Intent(this, SeletEventoMain.class);
+        startActivity(intent);
+        finish();
     }
 }

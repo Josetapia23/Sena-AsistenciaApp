@@ -3,6 +3,7 @@ package com.example.cedula_scanner;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -49,9 +50,7 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
     private void loginUser(final String username, final String password) {
-
-        String url = "http://192.168.1.106/AsistenciaApi/login.php";
-
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/login.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
@@ -76,8 +75,21 @@ public class LoginActivity extends AppCompatActivity {
                             throw new RuntimeException(e);
                         }
 
-
                         if (success) {
+                            // Guardar datos de sesión
+                            SharedPreferences.Editor editor = getSharedPreferences("MyPrefs", MODE_PRIVATE).edit();
+                            editor.putBoolean("isLoggedIn", true);
+                            editor.putString("username", username);
+                            try {
+                                if (jsonObject.has("userId")) {
+                                    editor.putString("userId", jsonObject.getString("userId"));
+                                }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                            // Usar commit en lugar de apply para asegurar que los datos se guarden inmediatamente
+                            editor.commit();
+
                             // Inicio de sesión exitoso
                             Toast.makeText(LoginActivity.this, message, Toast.LENGTH_SHORT).show();
                             // Aquí puedes redirigir a la siguiente actividad o realizar otra acción
