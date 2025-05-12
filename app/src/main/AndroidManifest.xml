@@ -36,6 +36,10 @@
             android:name=".MainActivity"
             android:exported="false" />
         <activity android:name=".about" />
+
+        <activity
+            android:name=".EncuestasPosRegActivity"
+            android:exported="false" />
         <activity
             android:name=".MainActivity2"
             android:exported="true">
@@ -45,7 +49,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".RegistroEscaneable" />
+
     </application>
 
 </manifest>

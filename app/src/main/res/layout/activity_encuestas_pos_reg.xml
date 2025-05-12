@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".EncuestasPosRegActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <include
+            android:id="@+id/my_toolbar"
+            layout="@layout/toolbar"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp"
+            app:layout_constraintTop_toBottomOf="@+id/my_toolbar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- Información del asistente -->
+            <TextView
+                android:id="@+id/tvInfoAsistente"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Encuesta - Red de Oportunidades"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Datos del asistente -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilNombreCompleto"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvNombreCompleto"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Nombre Completo"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilCedula"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/tvCedula"
+                    style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                    android:layout_width="320dp"
+                    android:layout_height="60dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:hint="Número de Cédula"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="25dp" />
+
+            <!-- Tipo de persona -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="¿Tipo de persona?"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+
+            <RadioGroup
+                android:id="@+id/rgTipoPersona"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="8dp">
+
+                <RadioButton
+                    android:id="@+id/rbPersonaNatural"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Persona Natural"
+                    android:checked="true"
+                    android:layout_marginEnd="16dp"/>
+
+                <RadioButton
+                    android:id="@+id/rbPersonaJuridica"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Persona Jurídica" />
+            </RadioGroup>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Sección Persona Jurídica (inicialmente oculta) -->
+            <LinearLayout
+                android:id="@+id/layoutPersonaJuridica"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="¿Es representante de una empresa?"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+
+                <RadioGroup
+                    android:id="@+id/rgRepresentanteEmpresa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp">
+
+                    <RadioButton
+                        android:id="@+id/rbSiRepresentante"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sí"
+                        android:layout_marginEnd="50dp"/>
+
+                    <RadioButton
+                        android:id="@+id/rbNoRepresentante"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No"
+                        android:checked="true" />
+                </RadioGroup>
+
+                <!-- Datos de la empresa (inicialmente ocultos) -->
+                <LinearLayout
+                    android:id="@+id/layoutDatosEmpresa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilNombreEmpresa"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="344dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp">
+
+                        <EditText
+                            android:id="@+id/etNombreEmpresa"
+                            style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                            android:layout_width="320dp"
+                            android:layout_height="60dp"
+                            android:layout_marginLeft="10dp"
+                            android:hint="Nombre de la Empresa"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilNitEmpresa"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="344dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+
+                        <EditText
+                            android:id="@+id/etNitEmpresa"
+                            style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                            android:layout_width="320dp"
+                            android:layout_height="60dp"
+                            android:layout_marginLeft="10dp"
+                            android:hint="NIT de la Empresa"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilTelefonoEmpresa"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="344dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+
+                        <EditText
+                            android:id="@+id/etTelefonoEmpresa"
+                            style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                            android:layout_width="320dp"
+                            android:layout_height="60dp"
+                            android:layout_marginLeft="10dp"
+                            android:hint="Teléfono de la Empresa"
+                            android:inputType="phone" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilCorreoEmpresa"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="344dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+
+                        <EditText
+                            android:id="@+id/etCorreoEmpresa"
+                            style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                            android:layout_width="320dp"
+                            android:layout_height="60dp"
+                            android:layout_marginLeft="10dp"
+                            android:hint="Correo de la Empresa"
+                            android:inputType="textEmailAddress" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Seleccione el proyecto SENA al que quiere pertenecer:"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="16dp"/>
+
+                    <Spinner
+                        android:id="@+id/spinnerProyectoSena"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="10dp"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Selección de intereses (para todos) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Seleccione sus intereses en orden de prioridad"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <!-- Interés 1 (Más importante) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Interés Principal (mayor prioridad):"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <Spinner
+                android:id="@+id/spinnerInteres1"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <!-- Interés 2 (Importancia media) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Segundo Interés (prioridad media):"
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <Spinner
+                android:id="@+id/spinnerInteres2"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <!-- Interés 3 (Menos importante) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tercer Interés (menor prioridad):"
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <Spinner
+                android:id="@+id/spinnerInteres3"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="25dp" />
+
+            <!-- Botón Guardar -->
+            <Button
+                android:id="@+id/btnGuardarEncuesta"
+                android:layout_width="268dp"
+                android:layout_height="66dp"
+                android:layout_gravity="center"
+                android:foregroundGravity="center"
+                android:gravity="center"
+                android:onClick="guardarEncuesta"
+                android:text="Guardar Encuesta" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="25dp" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

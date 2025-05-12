@@ -659,11 +659,14 @@ public class MainActivity extends AppCompatActivity {
                             builder.setMessage(message);
 
                             if (success || jsonResponse.optBoolean("already_registered", false)) {
-                                // En caso de éxito o usuario ya registrado, ir a AccionesMainActivity
+                                // En caso de éxito o usuario ya registrado, ir a la encuesta
                                 builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
-                                        Intent intent = new Intent(MainActivity.this, AccionesMainActivity.class);
+                                        // Pasar a la pantalla de encuestas en lugar de AccionesMainActivity
+                                        Intent intent = new Intent(MainActivity.this, EncuestasPosRegActivity.class);
+                                        intent.putExtra("nombre_completo", nombres + " " + apellidos);
+                                        intent.putExtra("numero_cedula", identificacion);
                                         startActivity(intent);
                                         finish();
                                     }
