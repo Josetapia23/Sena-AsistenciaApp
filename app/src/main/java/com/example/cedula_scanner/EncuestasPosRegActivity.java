@@ -16,8 +16,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckedTextView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
@@ -31,15 +33,22 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class EncuestasPosRegActivity extends AppCompatActivity {
+
+    private static final String TAG = "EncuestasPosRegActivity";
+    private static final String PREFS_NAME = "CursosPrefs";
 
     private Toolbar toolbar;
     private EditText tvNombreCompleto, tvCedula;
@@ -48,6 +57,8 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     private RadioButton rbPersonaNatural, rbPersonaJuridica, rbSiRepresentante, rbNoRepresentante;
     private LinearLayout layoutPersonaJuridica, layoutDatosEmpresa;
     private Spinner spinnerProyectoSena, spinnerInteres1, spinnerInteres2, spinnerInteres3;
+    private Spinner spinnerTipoPrograma; // Nuevo spinner para tipo de programa
+    private ListView listViewCursos;
 
     private String nombreCompleto;
     private String numeroCedula;
@@ -59,6 +70,18 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     private List<Integer> listaInteresesIds = new ArrayList<>();
     private List<String> listaProyectosSena = new ArrayList<>();
     private List<Integer> listaProyectosSenaIds = new ArrayList<>();
+    private List<String> listaTiposProgramas = new ArrayList<>(); // Para el spinner de tipos
+
+    // Listas para cursos
+    private List<String> listaCursos = new ArrayList<>();
+    private List<Integer> listaCursosIds = new ArrayList<>();
+    private Map<Integer, String> mapaCursos = new HashMap<>();
+    private List<Integer> cursosSeleccionados = new ArrayList<>();
+    private ArrayAdapter<String> adapterCursos;
+
+    // Lista completa de todos los cursos (para almacenamiento local)
+    private Map<Integer, Curso> todosLosCursos = new HashMap<>();
+    private boolean datosAlmacenados = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,6 +116,11 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         spinnerInteres1 = findViewById(R.id.spinnerInteres1);
         spinnerInteres2 = findViewById(R.id.spinnerInteres2);
         spinnerInteres3 = findViewById(R.id.spinnerInteres3);
+
+        // Nueva referencia al spinner de tipo de programa
+        spinnerTipoPrograma = findViewById(R.id.spinnerTipoPrograma);
+
+        listViewCursos = findViewById(R.id.listViewCursos);
 
         // Obtener IDs de evento y subevento
         SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
@@ -132,8 +160,152 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             }
         });
 
+        // Configurar Spinner para tipo de programa
+        spinnerTipoPrograma.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String tipoSeleccionado = (String) parent.getItemAtPosition(position);
+                filtrarCursosPorTipo(tipoSeleccionado);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // No hacer nada
+            }
+        });
+
+        // Configurar ListView para selección múltiple
+        listViewCursos.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+        listViewCursos.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // Usar CheckedTextView para mostrar estado de selección
+                CheckedTextView item = (CheckedTextView) view;
+
+                // Obtener el ID del curso seleccionado
+                int cursoId = listaCursosIds.get(position);
+
+                // Limitar a 3 selecciones máximo
+                if (item.isChecked()) {
+                    // Si ya está seleccionado, quitarlo de la lista
+                    if (cursosSeleccionados.contains(cursoId)) {
+                        cursosSeleccionados.remove(Integer.valueOf(cursoId));
+                    }
+                } else {
+                    // Si no está seleccionado, verificar si ya hay 3 seleccionados
+                    if (cursosSeleccionados.size() >= 3) {
+                        item.setChecked(false);
+                        Toast.makeText(EncuestasPosRegActivity.this,
+                                "Puede seleccionar máximo 3 programas",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    // Agregar a la lista de seleccionados
+                    cursosSeleccionados.add(cursoId);
+                }
+            }
+        });
+
+        // Configurar el adaptador para la lista de cursos
+        adapterCursos = new ArrayAdapter<>(
+                this, android.R.layout.simple_list_item_multiple_choice, listaCursos);
+        listViewCursos.setAdapter(adapterCursos);
+
         // Llenar los spinners con datos
         cargarDatosSpinners();
+
+        // Verificar si hay datos guardados en SharedPreferences
+        cargarCursosDesdePreferencias();
+
+        // Si no hay datos locales o si han pasado más de 24 horas desde la última actualización,
+        // intentar cargar cursos desde el servidor
+        if (!datosAlmacenados) {
+            cargarCursosDesdeServidor();
+        } else {
+            // Si hay datos locales, actualizar el spinner de tipos y filtrar con el primer tipo
+            actualizarTiposProgramas();
+        }
+    }
+
+    // Clase interna para representar un curso
+    private static class Curso {
+        int id;
+        String nombre;
+        String tipo;
+
+        Curso(int id, String nombre, String tipo) {
+            this.id = id;
+            this.nombre = nombre;
+            this.tipo = tipo;
+        }
+    }
+
+    private void cargarCursosDesdePreferencias() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
+        // Obtener la fecha de la última actualización
+        long ultimaActualizacion = prefs.getLong("ultima_actualizacion", 0);
+        long ahora = System.currentTimeMillis();
+
+        // Si han pasado más de 24 horas (86400000 ms), forzar una nueva carga
+        boolean actualizacionNecesaria = (ahora - ultimaActualizacion) > 86400000;
+
+        if (!actualizacionNecesaria) {
+            try {
+                // Intentar cargar los datos guardados
+                String cursosJson = prefs.getString("cursos_json", null);
+
+                if (cursosJson != null) {
+                    JSONArray jsonArray = new JSONArray(cursosJson);
+                    todosLosCursos.clear();
+
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
+                        int id = jsonObject.getInt("id");
+                        String nombre = jsonObject.getString("nombre");
+                        String tipo = jsonObject.getString("tipo");
+
+                        todosLosCursos.put(id, new Curso(id, nombre, tipo));
+                    }
+
+                    datosAlmacenados = true;
+                    Log.d(TAG, "Cursos cargados desde preferencias: " + todosLosCursos.size());
+                    return;
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, "Error al cargar cursos desde preferencias: " + e.getMessage());
+            }
+        }
+
+        datosAlmacenados = false;
+    }
+
+    private void guardarCursosEnPreferencias() {
+        if (todosLosCursos.isEmpty()) {
+            return;
+        }
+
+        try {
+            JSONArray jsonArray = new JSONArray();
+
+            for (Curso curso : todosLosCursos.values()) {
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("id", curso.id);
+                jsonObject.put("nombre", curso.nombre);
+                jsonObject.put("tipo", curso.tipo);
+                jsonArray.put(jsonObject);
+            }
+
+            SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+            editor.putString("cursos_json", jsonArray.toString());
+            editor.putLong("ultima_actualizacion", System.currentTimeMillis());
+            editor.apply();
+
+            Log.d(TAG, "Cursos guardados en preferencias: " + todosLosCursos.size());
+
+        } catch (JSONException e) {
+            Log.e(TAG, "Error al guardar cursos en preferencias: " + e.getMessage());
+        }
     }
 
     private void cargarDatosSpinners() {
@@ -175,7 +347,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         spinnerInteres2.setAdapter(adapterIntereses);
         spinnerInteres3.setAdapter(adapterIntereses);
 
-        // Cargar lista de proyectos SENA (esto podría obtenerse de una API/base de datos)
+        // Cargar lista de proyectos SENA
         listaProyectosSenaIds.add(-1);
         listaProyectosSena.add("Seleccione un proyecto...");
 
@@ -191,13 +363,181 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         listaProyectosSenaIds.add(4);
         listaProyectosSena.add("Red Tecnoparque");
 
-
         // Crear adaptador para el spinner de proyectos SENA
         ArrayAdapter<String> adapterProyectos = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, listaProyectosSena);
         adapterProyectos.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         spinnerProyectoSena.setAdapter(adapterProyectos);
+    }
+
+    // Método para actualizar el spinner de tipos de programas
+    private void actualizarTiposProgramas() {
+        // Obtener tipos únicos de todos los cursos
+        Set<String> tiposUnicos = new HashSet<>();
+
+        for (Curso curso : todosLosCursos.values()) {
+            tiposUnicos.add(curso.tipo);
+        }
+
+        // Convertir a lista y ordenar
+        listaTiposProgramas = new ArrayList<>(tiposUnicos);
+        Collections.sort(listaTiposProgramas);
+
+        // Crear adaptador para el spinner de tipos
+        ArrayAdapter<String> adapterTipos = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, listaTiposProgramas);
+        adapterTipos.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        spinnerTipoPrograma.setAdapter(adapterTipos);
+
+        // Si hay tipos disponibles, filtrar por el primero
+        if (!listaTiposProgramas.isEmpty()) {
+            filtrarCursosPorTipo(listaTiposProgramas.get(0));
+        }
+    }
+
+    private void filtrarCursosPorTipo(String tipo) {
+        // Limpiar las listas actuales
+        listaCursos.clear();
+        listaCursosIds.clear();
+
+        // Si no hay cursos para filtrar, mostrar mensaje
+        if (todosLosCursos.isEmpty()) {
+            Toast.makeText(this, "No hay programas disponibles", Toast.LENGTH_SHORT).show();
+            adapterCursos.notifyDataSetChanged();
+            return;
+        }
+
+        // Filtrar cursos por tipo (preservando mayúsculas/minúsculas)
+        for (Curso curso : todosLosCursos.values()) {
+            if (curso.tipo.equalsIgnoreCase(tipo)) {
+                listaCursosIds.add(curso.id);
+                listaCursos.add(curso.nombre);
+            }
+        }
+
+        // Notificar al adaptador de los cambios
+        adapterCursos.notifyDataSetChanged();
+
+        // Limpiar las selecciones previas
+        cursosSeleccionados.clear();
+        listViewCursos.clearChoices();
+    }
+
+    // Método para cargar cursos desde el servidor
+    private void cargarCursosDesdeServidor() {
+        // Mostrar diálogo de progreso
+        ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Cargando programas del SENA...");
+        progressDialog.show();
+
+        // Realizar petición al servidor
+        RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+        String url = "http://192.168.68.162/AsistenciaApi/obtenerTodosCursos.php";
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        progressDialog.dismiss();
+                        try {
+                            JSONObject jsonResponse = new JSONObject(response);
+                            boolean success = jsonResponse.getBoolean("success");
+
+                            if (success) {
+                                JSONArray cursos = jsonResponse.getJSONArray("cursos");
+                                todosLosCursos.clear();
+
+                                for (int i = 0; i < cursos.length(); i++) {
+                                    JSONObject curso = cursos.getJSONObject(i);
+                                    int id = curso.getInt("id_curso");
+                                    String nombre = curso.getString("nombre");
+                                    String tipo = curso.getString("tipo");
+
+                                    todosLosCursos.put(id, new Curso(id, nombre, tipo));
+                                }
+
+                                // Guardar en SharedPreferences para uso futuro
+                                guardarCursosEnPreferencias();
+
+                                // Actualizar spinner de tipos y filtrar cursos
+                                actualizarTiposProgramas();
+
+                                Log.d(TAG, "Cursos cargados desde servidor: " + todosLosCursos.size());
+
+                            } else {
+                                Toast.makeText(EncuestasPosRegActivity.this,
+                                        "No se pudieron cargar los programas",
+                                        Toast.LENGTH_SHORT).show();
+                                // Intentar usar datos almacenados si existen
+                                if (datosAlmacenados) {
+                                    actualizarTiposProgramas();
+                                }
+                            }
+
+                        } catch (JSONException e) {
+                            Toast.makeText(EncuestasPosRegActivity.this,
+                                    "Error al procesar los datos: " + e.getMessage(),
+                                    Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "Error al procesar respuesta: " + e.getMessage());
+
+                            // Intentar usar datos almacenados si existen
+                            if (datosAlmacenados) {
+                                actualizarTiposProgramas();
+                            }
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        progressDialog.dismiss();
+                        Log.e(TAG, "Error de red: " + error.getMessage());
+
+                        // Mostrar mensaje de error
+                        Toast.makeText(EncuestasPosRegActivity.this,
+                                "Error de conexión. Usando datos almacenados.",
+                                Toast.LENGTH_SHORT).show();
+
+                        // Intentar usar datos almacenados si existen
+                        if (datosAlmacenados) {
+                            actualizarTiposProgramas();
+                        } else {
+                            // Cargar datos de ejemplo si no hay datos almacenados
+                            cargarCursosDeEjemplo();
+                            actualizarTiposProgramas();
+                        }
+                    }
+                });
+
+        // Aumentar el tiempo de espera para la solicitud
+        stringRequest.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(
+                10000, // 10 segundos de timeout
+                1, // Sin reintentos
+                1.0f));
+
+        queue.add(stringRequest);
+    }
+
+    // Método para cargar ejemplos de cursos en caso de error
+    private void cargarCursosDeEjemplo() {
+        todosLosCursos.clear();
+
+        // Ejemplos de cursos con los tipos reales que encontramos en la base de datos
+        todosLosCursos.put(1, new Curso(1, "Técnico en Sistemas", "TECNICO"));
+        todosLosCursos.put(2, new Curso(2, "Técnico en Electricidad", "TECNICO"));
+        todosLosCursos.put(3, new Curso(3, "Promoción de Productos", "AUXILIAR"));
+        todosLosCursos.put(4, new Curso(4, "Cocina", "AUXILIAR"));
+        todosLosCursos.put(5, new Curso(5, "Servicios de Alimentación y Limpieza", "AUXILIAR"));
+        todosLosCursos.put(6, new Curso(6, "Tecnólogo en Desarrollo de Software", "TECNOLOGO"));
+        todosLosCursos.put(7, new Curso(7, "Tecnólogo en Gestión Empresarial", "TECNOLOGO"));
+        todosLosCursos.put(8, new Curso(8, "Bisutería Artesanal", "OPERARIO"));
+        todosLosCursos.put(9, new Curso(9, "Cuidado Estético de Manos y Pies", "OPERARIO"));
+        todosLosCursos.put(10, new Curso(10, "Construcción de Estructuras en Concreto", "OPERARIO"));
+
+        // Guardar estos ejemplos en SharedPreferences
+        guardarCursosEnPreferencias();
     }
 
     public void setUpToolbar() {
@@ -243,6 +583,13 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     }
 
     public void guardarEncuesta(View view) {
+        // Validar que se haya seleccionado un proyecto SENA
+        int posProyecto = spinnerProyectoSena.getSelectedItemPosition();
+        if (posProyecto == 0) {
+            Toast.makeText(this, "Por favor seleccione un proyecto SENA", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         // Validar que se hayan seleccionado intereses
         int posInteres1 = spinnerInteres1.getSelectedItemPosition();
         int posInteres2 = spinnerInteres2.getSelectedItemPosition();
@@ -266,6 +613,12 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         // Validar que no se repitan los intereses
         if (posInteres1 == posInteres2 || posInteres1 == posInteres3 || posInteres2 == posInteres3) {
             Toast.makeText(this, "Por favor, seleccione intereses diferentes", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Validar que se haya seleccionado al menos un programa
+        if (cursosSeleccionados.isEmpty()) {
+            Toast.makeText(this, "Por favor seleccione al menos un programa", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -308,12 +661,6 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                 etCorreoEmpresa.requestFocus();
                 return;
             }
-
-            // Validar que se haya seleccionado un proyecto SENA
-            if (spinnerProyectoSena.getSelectedItemPosition() == 0) {
-                Toast.makeText(this, "Por favor seleccione un proyecto SENA", Toast.LENGTH_SHORT).show();
-                return;
-            }
         }
 
         // Mostrar diálogo de progreso
@@ -330,12 +677,16 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         final String telefonoEmpresa = etTelefonoEmpresa.getText().toString().trim();
         final String correoEmpresa = etCorreoEmpresa.getText().toString().trim();
 
-        final int proyectoSenaId = esPersonaJuridica && esRepresentanteEmpresa ?
-                listaProyectosSenaIds.get(spinnerProyectoSena.getSelectedItemPosition()) : -1;
-
+        final int proyectoSenaId = listaProyectosSenaIds.get(posProyecto);
         final int interes1Id = listaInteresesIds.get(posInteres1);
         final int interes2Id = listaInteresesIds.get(posInteres2);
         final int interes3Id = listaInteresesIds.get(posInteres3);
+
+        // Convertir los IDs de cursos seleccionados a un formato JSON
+        JSONArray jsonCursos = new JSONArray();
+        for (Integer cursoId : cursosSeleccionados) {
+            jsonCursos.put(cursoId);
+        }
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
@@ -347,6 +698,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                     public void onResponse(String response) {
                         progressDialog.dismiss();
                         try {
+
                             JSONObject jsonResponse = new JSONObject(response);
                             boolean success = jsonResponse.getBoolean("success");
                             String message = jsonResponse.getString("message");
@@ -371,6 +723,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
                         } catch (JSONException e) {
                             Toast.makeText(EncuestasPosRegActivity.this, "Error al procesar la respuesta: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "Error al procesar respuesta JSON: " + e.getMessage());
                         }
                     }
                 },
@@ -378,12 +731,30 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         progressDialog.dismiss();
+
+                        Log.e(TAG, "Error en la solicitud: " + error.toString());
+
+                        // Mostrar el mensaje de error
                         AlertDialog.Builder builder = new AlertDialog.Builder(EncuestasPosRegActivity.this);
                         builder.setTitle("Error de conexión");
-                        builder.setMessage("No se pudo conectar con el servidor. Por favor, intente nuevamente.");
-                        builder.setPositiveButton("Aceptar", null);
+                        builder.setMessage("No se pudo conectar con el servidor. Los datos se guardarán localmente y se enviarán cuando haya conexión.");
+
+                        // Guardar los datos localmente para enviarlos después
+                        guardarEncuestaLocalmente(tipoPersona, esRepresentante, nombreEmpresa, nitEmpresa,
+                                telefonoEmpresa, correoEmpresa, proyectoSenaId, interes1Id,
+                                interes2Id, interes3Id, jsonCursos.toString());
+
+                        builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                // Volver a la pantalla principal
+                                Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                startActivity(intent);
+                                finish();
+                            }
+                        });
                         builder.show();
-                        Log.e("EncuestaError", error.toString());
                     }
                 }
         ) {
@@ -394,6 +765,15 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                 params.put("idEvento", idEvento);
                 params.put("idSubevento", idSubevento);
                 params.put("tipo_persona", tipoPersona);
+                params.put("proyecto_sena", String.valueOf(proyectoSenaId));
+
+                // Intereses
+                params.put("interes1", String.valueOf(interes1Id));
+                params.put("interes2", String.valueOf(interes2Id));
+                params.put("interes3", String.valueOf(interes3Id));
+
+                // Cursos seleccionados
+                params.put("cursos_seleccionados", jsonCursos.toString());
 
                 // Si es persona jurídica y representante, enviar datos de la empresa
                 if (tipoPersona.equals("Juridica") && esRepresentante.equals("Si")) {
@@ -402,21 +782,73 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                     params.put("nit_empresa", nitEmpresa);
                     params.put("telefono_empresa", telefonoEmpresa);
                     params.put("correo_empresa", correoEmpresa);
-                    params.put("proyecto_sena", String.valueOf(proyectoSenaId));
                 } else {
                     params.put("es_representante", "No");
                 }
-
-                // Enviar los intereses seleccionados
-                params.put("interes1", String.valueOf(interes1Id));
-                params.put("interes2", String.valueOf(interes2Id));
-                params.put("interes3", String.valueOf(interes3Id));
 
                 return params;
             }
         };
 
+        // Aumentar el tiempo de espera para la solicitud
+        stringRequest.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(
+                15000, // 15 segundos de timeout
+                1, // Sin reintentos
+                1.0f));
+
         queue.add(stringRequest);
+    }
+
+    private void guardarEncuestaLocalmente(String tipoPersona, String esRepresentante,
+                                           String nombreEmpresa, String nitEmpresa,
+                                           String telefonoEmpresa, String correoEmpresa,
+                                           int proyectoSenaId, int interes1Id,
+                                           int interes2Id, int interes3Id,
+                                           String jsonCursos) {
+        try {
+            // Crear un objeto JSON con todos los datos
+            JSONObject jsonData = new JSONObject();
+            jsonData.put("cedula", numeroCedula);
+            jsonData.put("idEvento", idEvento);
+            jsonData.put("idSubevento", idSubevento);
+            jsonData.put("tipo_persona", tipoPersona);
+            jsonData.put("proyecto_sena", proyectoSenaId);
+            jsonData.put("interes1", interes1Id);
+            jsonData.put("interes2", interes2Id);
+            jsonData.put("interes3", interes3Id);
+            jsonData.put("cursos_seleccionados", jsonCursos);
+
+            if (tipoPersona.equals("Juridica") && esRepresentante.equals("Si")) {
+                jsonData.put("es_representante", "Si");
+                jsonData.put("nombre_empresa", nombreEmpresa);
+                jsonData.put("nit_empresa", nitEmpresa);
+                jsonData.put("telefono_empresa", telefonoEmpresa);
+                jsonData.put("correo_empresa", correoEmpresa);
+            } else {
+                jsonData.put("es_representante", "No");
+            }
+
+            // Guardar en SharedPreferences
+            SharedPreferences prefs = getSharedPreferences("EncuestasPendientes", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+
+            // Obtener encuestas pendientes previas
+            String encuestasPendientesJson = prefs.getString("encuestas", "[]");
+            JSONArray encuestasPendientes = new JSONArray(encuestasPendientesJson);
+
+            // Agregar la nueva encuesta
+            encuestasPendientes.put(jsonData);
+
+            // Guardar el array actualizado
+            editor.putString("encuestas", encuestasPendientes.toString());
+            editor.apply();
+
+            Log.d(TAG, "Encuesta guardada localmente: " + jsonData.toString());
+
+        } catch (JSONException e) {
+            Log.e(TAG, "Error al guardar encuesta localmente: " + e.getMessage());
+            Toast.makeText(this, "Error al guardar datos localmente", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override

@@ -4,10 +4,12 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -32,12 +34,14 @@ import java.util.List;
 import java.util.Map;
 
 public class SeletEventoMain extends AppCompatActivity {
+    private static final String TAG = "SeletEventoMain";
     private Spinner spinnerEvento;
     private Map<String, String> subeventosIdMap;
     private Map<String, String> eventosIdMap;
     private Handler refreshHandler;
     private Runnable refreshRunnable;
     private static final int REFRESH_INTERVAL = 60000; // 1 minuto en milisegundos
+    private boolean datosMunicipiosCargados = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +72,10 @@ public class SeletEventoMain extends AppCompatActivity {
             }
         };
 
+        // Cargar datos geográficos en segundo plano
+        cargarDatosGeograficos();
+
+        // Cargar eventos
         cargarEventos();
     }
 
@@ -174,6 +182,12 @@ public class SeletEventoMain extends AppCompatActivity {
             editor.putString("idEvento", idEvento);
             editor.apply();
 
+            // Verificar si los datos geográficos están cargados
+            if (!datosMunicipiosCargados) {
+                // Si no están cargados, intentar cargarlos ahora
+                cargarDatosGeograficos();
+            }
+
             // Se han obtenido los IDs, pasar a la siguiente actividad
             Intent intent = new Intent(SeletEventoMain.this, AccionesMainActivity.class);
             intent.putExtra("id_subevento", idSubevento);
@@ -239,6 +253,67 @@ public class SeletEventoMain extends AppCompatActivity {
                         Toast.makeText(SeletEventoMain.this, "Error de red: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+        queue.add(request);
+    }
+
+    /**
+     * Carga los datos de departamentos y municipios desde el servidor y los guarda en caché
+     */
+    private void cargarDatosGeograficos() {
+        // Primero verificar si ya están en caché y si son recientes (menos de 24 horas)
+        SharedPreferences prefs = getSharedPreferences("DatosMunicipios", MODE_PRIVATE);
+        long ultimaActualizacion = prefs.getLong("ultima_actualizacion", 0);
+        long ahora = System.currentTimeMillis();
+        boolean actualizacionNecesaria = (ahora - ultimaActualizacion) > 86400000; // 24 horas en milisegundos
+
+        if (!actualizacionNecesaria && prefs.contains("departamentos_json")) {
+            // Si hay datos en caché y son recientes, usarlos
+            Log.d(TAG, "Usando datos geográficos de caché");
+            datosMunicipiosCargados = true;
+            return;
+        }
+
+        // Si no hay datos en caché o son antiguos, cargarlos del servidor
+        //String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/obtenerDepartamentos.php";
+        String url = "http://192.168.68.162/AsistenciaApi/obtenerDepartamentos.php";
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            JSONObject jsonObject = new JSONObject(response);
+                            boolean success = jsonObject.getBoolean("success");
+                            if (success) {
+                                // Guardar en caché
+                                SharedPreferences.Editor editor = getSharedPreferences("DatosMunicipios", MODE_PRIVATE).edit();
+                                editor.putString("departamentos_json", response);
+                                editor.putLong("ultima_actualizacion", System.currentTimeMillis());
+                                editor.apply();
+
+                                datosMunicipiosCargados = true;
+                                Log.d(TAG, "Datos geográficos cargados y guardados en caché");
+                            } else {
+                                Log.e(TAG, "Error al cargar datos geográficos: " + jsonObject.optString("message"));
+                            }
+                        } catch (JSONException e) {
+                            Log.e(TAG, "Error al procesar datos geográficos: " + e.getMessage());
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "Error de red al cargar datos geográficos: " + error.getMessage());
+                    }
+                });
+
+        // Aumentar el tiempo de espera para esta solicitud
+        request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(
+                15000, // 15 segundos de timeout
+                1, // Sin reintentos
+                1.0f));
 
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(request);

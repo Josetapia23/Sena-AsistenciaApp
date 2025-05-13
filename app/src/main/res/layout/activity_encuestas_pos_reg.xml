@@ -232,24 +232,29 @@
                             android:hint="Correo de la Empresa"
                             android:inputType="textEmailAddress" />
                     </com.google.android.material.textfield.TextInputLayout>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Seleccione el proyecto SENA al que quiere pertenecer:"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="16dp"/>
-
-                    <Spinner
-                        android:id="@+id/spinnerProyectoSena"
-                        android:layout_width="match_parent"
-                        android:layout_height="60dp"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginStart="10dp"
-                        android:layout_marginEnd="10dp"/>
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Proyectos SENA (para ambos tipos de persona) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Seleccione el proyecto SENA al que quiere pertenecer:"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <Spinner
+                android:id="@+id/spinnerProyectoSena"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
 
             <!-- Selección de intereses (para todos) -->
             <TextView
@@ -310,6 +315,54 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginStart="10dp"
                 android:layout_marginEnd="10dp"/>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="15dp" />
+
+            <!-- Selección de Cursos del SENA -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Seleccione los programas del SENA que le interesan:"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <!-- Spinner para filtrar por tipo de programa -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Filtrar por tipo de programa:"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <Spinner
+                android:id="@+id/spinnerTipoPrograma"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <!-- Lista de programas -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Seleccione hasta 3 programas (marque las casillas):"
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
+
+            <ListView
+                android:id="@+id/listViewCursos"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:choiceMode="multipleChoice" />
 
             <Space
                 android:layout_width="match_parent"
