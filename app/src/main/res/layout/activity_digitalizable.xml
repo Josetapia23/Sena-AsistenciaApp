@@ -104,7 +104,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Nombres"
-                    android:inputType="textPersonName"
+                    android:inputType="textPersonName|textCapCharacters"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -121,7 +121,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Apellidos"
-                    android:inputType="textPersonName"
+                    android:inputType="textPersonName|textCapCharacters"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -245,7 +245,34 @@
                     android:inputType="phone"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
+            <!-- Departamento -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Departamento:"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
 
+            <Spinner
+                android:id="@+id/spinnerDepartamento"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Municipio -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Municipio:"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"/>
+
+            <Spinner
+                android:id="@+id/spinnerMunicipio"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginBottom="16dp" />
             <!-- Dirección -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilDireccion"

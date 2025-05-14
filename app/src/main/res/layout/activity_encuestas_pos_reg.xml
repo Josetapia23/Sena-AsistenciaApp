@@ -320,7 +320,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Selección de Cursos del SENA -->
+            <!-- SECCIÓN MODIFICADA: Selección de Programas del SENA -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -346,23 +346,36 @@
                 android:layout_marginStart="10dp"
                 android:layout_marginEnd="10dp"/>
 
-            <!-- Lista de programas -->
-            <TextView
+            <!-- Botón para abrir selector de programas -->
+            <Button
+                android:id="@+id/btnSeleccionarProgramas"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Seleccione hasta 3 programas (marque las casillas):"
                 android:layout_marginTop="16dp"
                 android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"/>
+                android:layout_marginEnd="10dp"
+                android:text="Seleccionar programas (máximo 3)" />
 
-            <ListView
-                android:id="@+id/listViewCursos"
+            <!-- Área para mostrar programas seleccionados -->
+            <LinearLayout
+                android:id="@+id/layoutProgramasSeleccionados"
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
                 android:layout_marginTop="8dp"
                 android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"
-                android:choiceMode="multipleChoice" />
+                android:layout_marginEnd="10dp">
+
+                <TextView
+                    android:id="@+id/tvProgramasSeleccionados"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No hay programas seleccionados"
+                    android:textStyle="italic"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="16dp"/>
+
+            </LinearLayout>
 
             <Space
                 android:layout_width="match_parent"

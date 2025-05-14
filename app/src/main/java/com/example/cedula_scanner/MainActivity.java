@@ -605,13 +605,21 @@ public class MainActivity extends AppCompatActivity {
         spinnerDepartamento = findViewById(R.id.spinnerDepartamento);
         spinnerMunicipio = findViewById(R.id.spinnerMunicipio);
 
-        // Configurar adaptadores iniciales vacíos
+        // Crear una lista para los departamentos con un ítem inicial
+        List<String> listaDeptConSeleccion = new ArrayList<>();
+        listaDeptConSeleccion.add("Seleccione departamento");
+
+        // Configurar adaptadores iniciales
         ArrayAdapter<String> adapterDepartamentos = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, new ArrayList<>());
+                android.R.layout.simple_spinner_dropdown_item, listaDeptConSeleccion);
         spinnerDepartamento.setAdapter(adapterDepartamentos);
 
+        // Lista vacía para municipios con mensaje inicial
+        List<String> listaMuniInicial = new ArrayList<>();
+        listaMuniInicial.add("Seleccione primero un departamento");
+
         ArrayAdapter<String> adapterMunicipios = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, new ArrayList<>());
+                android.R.layout.simple_spinner_dropdown_item, listaMuniInicial);
         spinnerMunicipio.setAdapter(adapterMunicipios);
 
         // Cargar datos geográficos
@@ -621,8 +629,19 @@ public class MainActivity extends AppCompatActivity {
         spinnerDepartamento.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position >= 0 && position < listaDepartamentos.size()) {
-                    String departamentoSeleccionado = listaDepartamentos.get(position);
+                if (position == 0) {
+                    // Si seleccionaron la opción "Seleccione departamento"
+                    List<String> listaMuniVacia = new ArrayList<>();
+                    listaMuniVacia.add("Seleccione primero un departamento");
+
+                    ArrayAdapter<String> adapterMunicipiosVacio = new ArrayAdapter<>(
+                            MainActivity.this,
+                            android.R.layout.simple_spinner_dropdown_item,
+                            listaMuniVacia);
+                    spinnerMunicipio.setAdapter(adapterMunicipiosVacio);
+                } else {
+                    // Posición - 1 porque tenemos el item "Seleccione departamento" al inicio
+                    String departamentoSeleccionado = listaDepartamentos.get(position - 1);
                     actualizarSpinnerMunicipios(departamentoSeleccionado);
                 }
             }
@@ -687,7 +706,8 @@ public class MainActivity extends AppCompatActivity {
 
             for (int i = 0; i < departamentosArray.length(); i++) {
                 JSONObject departamentoObj = departamentosArray.getJSONObject(i);
-                String nombreDepartamento = departamentoObj.getString("nombre");
+                // Decodificar el nombre del departamento
+                String nombreDepartamento = decodificarTexto(departamentoObj.getString("nombre"));
 
                 // Añadir a la lista de departamentos
                 listaDepartamentos.add(nombreDepartamento);
@@ -696,10 +716,14 @@ public class MainActivity extends AppCompatActivity {
                 JSONArray municipiosArray = departamentoObj.getJSONArray("municipios");
                 List<String> municipiosDelDepartamento = new ArrayList<>();
 
+                // Añadir opción "Seleccione municipio" al inicio
+                municipiosDelDepartamento.add("Seleccione municipio");
+
                 for (int j = 0; j < municipiosArray.length(); j++) {
                     JSONObject municipioObj = municipiosArray.getJSONObject(j);
                     int idMunicipio = municipioObj.getInt("id");
-                    String nombreMunicipio = municipioObj.getString("nombre");
+                    // Decodificar el nombre del municipio
+                    String nombreMunicipio = decodificarTexto(municipioObj.getString("nombre"));
 
                     // Añadir a la lista de municipios de este departamento
                     municipiosDelDepartamento.add(nombreMunicipio);
@@ -712,24 +736,37 @@ public class MainActivity extends AppCompatActivity {
                 mapaMunicipiosPorDepartamento.put(nombreDepartamento, municipiosDelDepartamento);
             }
 
+            // Crear lista con opción inicial
+            List<String> listaDeptConSeleccion = new ArrayList<>();
+            listaDeptConSeleccion.add("Seleccione departamento");
+            listaDeptConSeleccion.addAll(listaDepartamentos);
+
             // Actualizar el spinner de departamentos
             ArrayAdapter<String> adapterDepartamentos = new ArrayAdapter<>(
                     MainActivity.this,
                     android.R.layout.simple_spinner_dropdown_item,
-                    listaDepartamentos);
+                    listaDeptConSeleccion);
             spinnerDepartamento.setAdapter(adapterDepartamentos);
 
-            // Si hay departamentos, seleccionar el primero para llenar el spinner de municipios
-            if (!listaDepartamentos.isEmpty()) {
-                spinnerDepartamento.setSelection(0);
-                actualizarSpinnerMunicipios(listaDepartamentos.get(0));
-            }
+            // Seleccionar la opción inicial "Seleccione departamento"
+            spinnerDepartamento.setSelection(0);
 
         } catch (JSONException e) {
             Log.e("MainActivity", "Error al procesar JSON de departamentos: " + e.getMessage());
             Toast.makeText(MainActivity.this,
                     "Error al procesar datos geográficos",
                     Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // Método para decodificar texto con caracteres especiales
+    private String decodificarTexto(String texto) {
+        try {
+            // Intenta diferentes métodos de decodificación hasta encontrar el correcto
+            return new String(texto.getBytes("ISO-8859-1"), "UTF-8");
+        } catch (Exception e) {
+            Log.e("Codificación", "Error al decodificar texto: " + e.getMessage());
+            return texto; // Devuelve el original si falla
         }
     }
 
@@ -743,12 +780,17 @@ public class MainActivity extends AppCompatActivity {
                     android.R.layout.simple_spinner_dropdown_item,
                     municipiosDelDepartamento);
             spinnerMunicipio.setAdapter(adapterMunicipios);
+            // Seleccionar "Seleccione municipio"
+            spinnerMunicipio.setSelection(0);
         } else {
-            // Si no hay municipios, mostrar lista vacía
+            // Si no hay municipios, mostrar lista vacía con mensaje
+            List<String> noMunicipios = new ArrayList<>();
+            noMunicipios.add("No hay municipios disponibles");
+
             spinnerMunicipio.setAdapter(new ArrayAdapter<>(
                     MainActivity.this,
                     android.R.layout.simple_spinner_dropdown_item,
-                    new ArrayList<>()));
+                    noMunicipios));
         }
     }
     private void insertarAsistencia(String idEvento) {
@@ -779,28 +821,32 @@ public class MainActivity extends AppCompatActivity {
         // Obtener departamento y municipio seleccionados - declarados como final
         final String departamento;
         final String municipio;
-        final int idMunicipio;
 
-        if (spinnerDepartamento.getSelectedItemPosition() >= 0 &&
-                spinnerDepartamento.getSelectedItemPosition() < listaDepartamentos.size()) {
-            departamento = listaDepartamentos.get(spinnerDepartamento.getSelectedItemPosition());
+// Verificar que no esté seleccionada la opción "Seleccione departamento"
+        if (spinnerDepartamento.getSelectedItemPosition() > 0) {
+            // Posición - 1 porque agregamos "Seleccione departamento" al inicio
+            departamento = listaDepartamentos.get(spinnerDepartamento.getSelectedItemPosition() - 1);
 
-            if (spinnerMunicipio.getSelectedItem() != null) {
+            // Verificar que no esté seleccionada la opción "Seleccione municipio"
+            if (spinnerMunicipio.getSelectedItemPosition() > 0) {
                 municipio = spinnerMunicipio.getSelectedItem().toString();
-                // Obtener el ID del municipio seleccionado
-                if (mapaMunicipiosIds.containsKey(municipio)) {
-                    idMunicipio = mapaMunicipiosIds.get(municipio);
-                } else {
-                    idMunicipio = 0;
-                }
             } else {
                 municipio = "";
-                idMunicipio = 0;
             }
         } else {
             departamento = "";
             municipio = "";
-            idMunicipio = 0;
+        }
+
+// Validar que se haya seleccionado departamento y municipio válidos
+        if (departamento.isEmpty() || municipio.isEmpty() ||
+                departamento.equals("Seleccione departamento") ||
+                municipio.equals("Seleccione municipio") ||
+                municipio.equals("Seleccione primero un departamento") ||
+                municipio.equals("No hay municipios disponibles")) {
+
+            Toast.makeText(this, "Por favor seleccione departamento y municipio válidos", Toast.LENGTH_SHORT).show();
+            return;
         }
 
         // Validaciones
@@ -842,43 +888,67 @@ public class MainActivity extends AppCompatActivity {
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "http://192.168.68.162/AsistenciaApi/insertarCedulaSc.php";
+        String url = "http://192.168.68.176/AsistenciaApi/insertarCedulaSc.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
                         progressDialog.dismiss();
+                        // En el método onResponse del insertarAsistencia
                         try {
                             JSONObject jsonResponse = new JSONObject(response);
                             boolean success = jsonResponse.getBoolean("success");
                             String message = jsonResponse.getString("message");
+                            boolean encuestaCompletada = jsonResponse.optBoolean("encuesta_completada", false);
 
                             // Mostrar alerta con el mensaje del servidor
                             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                             builder.setTitle(success ? "Éxito" : "Aviso");
-                            builder.setMessage(message);
 
-                            if (success || jsonResponse.optBoolean("already_registered", false)) {
-                                // En caso de éxito o usuario ya registrado, ir a la encuesta
+                            if (encuestaCompletada) {
+                                // Si ya completó la encuesta, informar y volver al menú principal
+                                builder.setMessage("Esta persona ya ha completado la encuesta para este evento.");
                                 builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
-                                        // Pasar a la pantalla de encuestas en lugar de AccionesMainActivity
+                                        // Volver a la pantalla principal para escanear otra cédula
+                                        Intent intent = new Intent(MainActivity.this, AccionesMainActivity.class);
+                                        startActivity(intent);
+                                        finish();
+                                    }
+                                });
+                            } else if (success || jsonResponse.optBoolean("already_registered", false)) {
+                                // En caso de éxito o usuario ya registrado (pero sin encuesta), ir a la encuesta
+                                builder.setMessage(message);
+                                builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        // Pasar a la pantalla de encuestas con todos los datos necesarios
                                         Intent intent = new Intent(MainActivity.this, EncuestasPosRegActivity.class);
                                         intent.putExtra("nombre_completo", nombres + " " + apellidos);
                                         intent.putExtra("numero_cedula", identificacion);
+
+                                        // Pasar también idEvento e idSubevento (aunque ya están en SharedPreferences)
+                                        // esto es para garantizar que siempre estén disponibles
+                                        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+                                        String idEvento = prefs.getString("idEvento", "");
+                                        String idSubevento = prefs.getString("idSubevento", "");
+
+                                        intent.putExtra("idEvento", idEvento);
+                                        intent.putExtra("idSubevento", idSubevento);
+
                                         startActivity(intent);
                                         finish();
                                     }
                                 });
                             } else {
                                 // En caso de error, solo cerrar el diálogo
+                                builder.setMessage(message);
                                 builder.setPositiveButton("Aceptar", null);
                             }
 
                             builder.show();
-
                         } catch (JSONException e) {
                             Toast.makeText(MainActivity.this, "Error al procesar la respuesta: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         }

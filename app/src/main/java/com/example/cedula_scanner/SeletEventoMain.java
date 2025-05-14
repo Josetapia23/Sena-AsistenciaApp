@@ -277,7 +277,7 @@ public class SeletEventoMain extends AppCompatActivity {
 
         // Si no hay datos en caché o son antiguos, cargarlos del servidor
         //String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/obtenerDepartamentos.php";
-        String url = "http://192.168.68.162/AsistenciaApi/obtenerDepartamentos.php";
+        String url = "http://192.168.68.176/AsistenciaApi/obtenerDepartamentos.php";
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override

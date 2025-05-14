@@ -16,13 +16,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.CheckedTextView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
@@ -57,8 +57,12 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     private RadioButton rbPersonaNatural, rbPersonaJuridica, rbSiRepresentante, rbNoRepresentante;
     private LinearLayout layoutPersonaJuridica, layoutDatosEmpresa;
     private Spinner spinnerProyectoSena, spinnerInteres1, spinnerInteres2, spinnerInteres3;
-    private Spinner spinnerTipoPrograma; // Nuevo spinner para tipo de programa
-    private ListView listViewCursos;
+    private Spinner spinnerTipoPrograma;
+
+    // Nuevas variables para la selección mejorada de programas
+    private Button btnSeleccionarProgramas;
+    private TextView tvProgramasSeleccionados;
+    private LinearLayout layoutProgramasSeleccionados;
 
     private String nombreCompleto;
     private String numeroCedula;
@@ -70,14 +74,10 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     private List<Integer> listaInteresesIds = new ArrayList<>();
     private List<String> listaProyectosSena = new ArrayList<>();
     private List<Integer> listaProyectosSenaIds = new ArrayList<>();
-    private List<String> listaTiposProgramas = new ArrayList<>(); // Para el spinner de tipos
+    private List<String> listaTiposProgramas = new ArrayList<>();
 
-    // Listas para cursos
-    private List<String> listaCursos = new ArrayList<>();
-    private List<Integer> listaCursosIds = new ArrayList<>();
-    private Map<Integer, String> mapaCursos = new HashMap<>();
+    // Lista para los cursos seleccionados
     private List<Integer> cursosSeleccionados = new ArrayList<>();
-    private ArrayAdapter<String> adapterCursos;
 
     // Lista completa de todos los cursos (para almacenamiento local)
     private Map<Integer, Curso> todosLosCursos = new HashMap<>();
@@ -117,10 +117,12 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         spinnerInteres2 = findViewById(R.id.spinnerInteres2);
         spinnerInteres3 = findViewById(R.id.spinnerInteres3);
 
-        // Nueva referencia al spinner de tipo de programa
         spinnerTipoPrograma = findViewById(R.id.spinnerTipoPrograma);
 
-        listViewCursos = findViewById(R.id.listViewCursos);
+        // Inicializar nuevas vistas para la selección de programas
+        btnSeleccionarProgramas = findViewById(R.id.btnSeleccionarProgramas);
+        tvProgramasSeleccionados = findViewById(R.id.tvProgramasSeleccionados);
+        layoutProgramasSeleccionados = findViewById(R.id.layoutProgramasSeleccionados);
 
         // Obtener IDs de evento y subevento
         SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
@@ -174,42 +176,13 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             }
         });
 
-        // Configurar ListView para selección múltiple
-        listViewCursos.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-        listViewCursos.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        // Configurar el botón para seleccionar programas
+        btnSeleccionarProgramas.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Usar CheckedTextView para mostrar estado de selección
-                CheckedTextView item = (CheckedTextView) view;
-
-                // Obtener el ID del curso seleccionado
-                int cursoId = listaCursosIds.get(position);
-
-                // Limitar a 3 selecciones máximo
-                if (item.isChecked()) {
-                    // Si ya está seleccionado, quitarlo de la lista
-                    if (cursosSeleccionados.contains(cursoId)) {
-                        cursosSeleccionados.remove(Integer.valueOf(cursoId));
-                    }
-                } else {
-                    // Si no está seleccionado, verificar si ya hay 3 seleccionados
-                    if (cursosSeleccionados.size() >= 3) {
-                        item.setChecked(false);
-                        Toast.makeText(EncuestasPosRegActivity.this,
-                                "Puede seleccionar máximo 3 programas",
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    // Agregar a la lista de seleccionados
-                    cursosSeleccionados.add(cursoId);
-                }
+            public void onClick(View v) {
+                mostrarDialogoProgramas();
             }
         });
-
-        // Configurar el adaptador para la lista de cursos
-        adapterCursos = new ArrayAdapter<>(
-                this, android.R.layout.simple_list_item_multiple_choice, listaCursos);
-        listViewCursos.setAdapter(adapterCursos);
 
         // Llenar los spinners con datos
         cargarDatosSpinners();
@@ -225,6 +198,23 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             // Si hay datos locales, actualizar el spinner de tipos y filtrar con el primer tipo
             actualizarTiposProgramas();
         }
+
+    }
+    // Método para normalizar la visualización de texto con caracteres especiales
+    private String mostrarTexto(String texto) {
+        if (texto == null) return "";
+
+        // Si no hay caracteres especiales latinoamericanos visibles, intentamos arreglar
+        if (!texto.matches(".*[áéíóúÁÉÍÓÚñÑüÜ].*")) {
+            try {
+                // Intenta interpretar como Latin-1 (ISO-8859-1)
+                return new String(texto.getBytes("ISO-8859-1"), "UTF-8");
+            } catch (Exception e) {
+                return texto;
+            }
+        }
+
+        return texto;
     }
 
     // Clase interna para representar un curso
@@ -238,6 +228,176 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             this.nombre = nombre;
             this.tipo = tipo;
         }
+
+        // Método para obtener el nombre corregido
+        public String getNombreCorregido() {
+            try {
+                // Intentar corregir la codificación
+                return new String(nombre.getBytes("ISO-8859-1"), "UTF-8");
+            } catch (Exception e) {
+                return nombre; // Si falla, devolver el nombre original
+            }
+        }
+    }
+
+    // Método para mostrar el diálogo de selección de programas
+    private void mostrarDialogoProgramas() {
+        // Obtener el tipo seleccionado actualmente
+        String tipoMostrado = "";
+        if (spinnerTipoPrograma.getSelectedItem() != null) {
+            tipoMostrado = spinnerTipoPrograma.getSelectedItem().toString();
+        } else {
+            Toast.makeText(this, "Seleccione un tipo de programa primero", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Necesitamos encontrar el tipo original que corresponde al tipo mostrado
+        String tipoOriginal = null;
+        for (Curso curso : todosLosCursos.values()) {
+            String tipoCursoCorregido;
+            try {
+                tipoCursoCorregido = new String(curso.tipo.getBytes("ISO-8859-1"), "UTF-8");
+            } catch (Exception e) {
+                tipoCursoCorregido = curso.tipo;
+            }
+
+            if (tipoCursoCorregido.equals(tipoMostrado)) {
+                tipoOriginal = curso.tipo;
+                break;
+            }
+        }
+
+        // Si no encontramos el tipo original, usamos el tipo mostrado
+        if (tipoOriginal == null) {
+            tipoOriginal = tipoMostrado;
+        }
+
+        final String tipoFinal = tipoOriginal;
+
+        // Filtrar cursos por el tipo seleccionado
+        final List<String> programasNombres = new ArrayList<>();
+        final List<Integer> programasIds = new ArrayList<>();
+
+        for (Curso curso : todosLosCursos.values()) {
+            if (curso.tipo.equals(tipoFinal)) {
+                // Usar el método getNombreCorregido para mostrar nombre con acentos correctos
+                programasNombres.add(curso.getNombreCorregido());
+                programasIds.add(curso.id);
+            }
+        }
+
+        if (programasNombres.isEmpty()) {
+            Toast.makeText(this, "No hay programas disponibles para este tipo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Crear array para guardar el estado de las selecciones
+        final boolean[] seleccionados = new boolean[programasNombres.size()];
+
+        // Marcar los que ya estaban seleccionados
+        for (int i = 0; i < programasIds.size(); i++) {
+            seleccionados[i] = cursosSeleccionados.contains(programasIds.get(i));
+        }
+
+        // Crear el diálogo
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Seleccione los programas (máximo 3)");
+
+        // Implementar el selector de múltiples items
+        builder.setMultiChoiceItems(
+                programasNombres.toArray(new String[0]),
+                seleccionados,
+                new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        // Si está marcando un nuevo elemento
+                        if (isChecked) {
+                            // Calcular cuántos elementos estarían seleccionados si aceptamos este cambio
+                            int totalSeleccionadosSimulado = cursosSeleccionados.size();
+
+                            // Si este elemento no estaba ya seleccionado, sumamos 1
+                            if (!cursosSeleccionados.contains(programasIds.get(which))) {
+                                totalSeleccionadosSimulado++;
+                            }
+
+                            // Verificar si excede el límite
+                            if (totalSeleccionadosSimulado > 3) {
+                                seleccionados[which] = false;
+                                ((AlertDialog) dialog).getListView().setItemChecked(which, false);
+                                Toast.makeText(EncuestasPosRegActivity.this,
+                                        "Puede seleccionar máximo 3 programas",
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+                });
+
+        // Botones para confirmar o cancelar
+        builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Primero, actualizamos las selecciones de cursos del tipo actual
+                for (int i = 0; i < seleccionados.length; i++) {
+                    Integer cursoId = programasIds.get(i);
+
+                    if (seleccionados[i]) {
+                        // Si está seleccionado y no estaba ya en la lista, añadirlo
+                        if (!cursosSeleccionados.contains(cursoId)) {
+                            cursosSeleccionados.add(cursoId);
+                        }
+                    } else {
+                        // Si no está seleccionado pero estaba en la lista, quitarlo
+                        if (cursosSeleccionados.contains(cursoId)) {
+                            cursosSeleccionados.remove(cursoId);
+                        }
+                    }
+                }
+
+                // Verificar que no excedamos el límite de 3 en total
+                if (cursosSeleccionados.size() > 3) {
+                    // En caso que exceda, mostramos un mensaje y dejamos solo los primeros 3
+                    Toast.makeText(EncuestasPosRegActivity.this,
+                            "Se han seleccionado los primeros 3 programas",
+                            Toast.LENGTH_SHORT).show();
+
+                    // Mantenemos solo los primeros 3 elementos
+                    while (cursosSeleccionados.size() > 3) {
+                        cursosSeleccionados.remove(cursosSeleccionados.size() - 1);
+                    }
+                }
+
+                // Actualizar la vista de programas seleccionados
+                actualizarVistaProgramasSeleccionados();
+            }
+        });
+
+        builder.setNegativeButton("Cancelar", null);
+
+        // Mostrar el diálogo
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    // Método para actualizar la vista de programas seleccionados
+    private void actualizarVistaProgramasSeleccionados() {
+        if (cursosSeleccionados.isEmpty()) {
+            tvProgramasSeleccionados.setText("No hay programas seleccionados");
+            return;
+        }
+
+        // Construir texto con los nombres de los programas seleccionados
+        StringBuilder sb = new StringBuilder();
+        sb.append("Programas seleccionados:\n\n");
+
+        for (Integer cursoId : cursosSeleccionados) {
+            Curso curso = todosLosCursos.get(cursoId);
+            if (curso != null) {
+                // Usar getNombreCorregido para mostrar nombre con acentos correctos
+                sb.append("• ").append(curso.getNombreCorregido()).append("\n");
+            }
+        }
+
+        tvProgramasSeleccionados.setText(sb.toString());
     }
 
     private void cargarCursosDesdePreferencias() {
@@ -381,8 +541,21 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         }
 
         // Convertir a lista y ordenar
-        listaTiposProgramas = new ArrayList<>(tiposUnicos);
-        Collections.sort(listaTiposProgramas);
+        List<String> tiposOriginales = new ArrayList<>(tiposUnicos);
+        Collections.sort(tiposOriginales);
+
+        // Corregir la codificación de los tipos
+        listaTiposProgramas.clear();
+        for (String tipo : tiposOriginales) {
+            try {
+                // Corregir la codificación
+                String tipoCorregido = new String(tipo.getBytes("ISO-8859-1"), "UTF-8");
+                listaTiposProgramas.add(tipoCorregido);
+            } catch (Exception e) {
+                // Si falla, usar el tipo original
+                listaTiposProgramas.add(tipo);
+            }
+        }
 
         // Crear adaptador para el spinner de tipos
         ArrayAdapter<String> adapterTipos = new ArrayAdapter<>(
@@ -397,32 +570,36 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         }
     }
 
-    private void filtrarCursosPorTipo(String tipo) {
-        // Limpiar las listas actuales
-        listaCursos.clear();
-        listaCursosIds.clear();
+    private void filtrarCursosPorTipo(String tipoMostrado) {
+        // Actualizar el texto del botón para indicar el tipo seleccionado
+        btnSeleccionarProgramas.setText("Seleccionar programas de tipo: " + tipoMostrado);
 
-        // Si no hay cursos para filtrar, mostrar mensaje
-        if (todosLosCursos.isEmpty()) {
-            Toast.makeText(this, "No hay programas disponibles", Toast.LENGTH_SHORT).show();
-            adapterCursos.notifyDataSetChanged();
-            return;
-        }
-
-        // Filtrar cursos por tipo (preservando mayúsculas/minúsculas)
+        // Necesitamos encontrar el tipo original que corresponde al tipo mostrado
+        String tipoOriginal = null;
         for (Curso curso : todosLosCursos.values()) {
-            if (curso.tipo.equalsIgnoreCase(tipo)) {
-                listaCursosIds.add(curso.id);
-                listaCursos.add(curso.nombre);
+            String tipoCursoCorregido;
+            try {
+                tipoCursoCorregido = new String(curso.tipo.getBytes("ISO-8859-1"), "UTF-8");
+            } catch (Exception e) {
+                tipoCursoCorregido = curso.tipo;
+            }
+
+            if (tipoCursoCorregido.equals(tipoMostrado)) {
+                tipoOriginal = curso.tipo;
+                break;
             }
         }
 
-        // Notificar al adaptador de los cambios
-        adapterCursos.notifyDataSetChanged();
+        // Si no encontramos el tipo original, usamos el tipo mostrado
+        if (tipoOriginal == null) {
+            tipoOriginal = tipoMostrado;
+        }
 
-        // Limpiar las selecciones previas
-        cursosSeleccionados.clear();
-        listViewCursos.clearChoices();
+        // Simplemente actualizamos el tipo actual sin eliminar selecciones previas
+        // Esto permitirá al usuario seleccionar programas de diferentes tipos
+
+        // No se eliminan las selecciones previas al cambiar de tipo de programa
+        // Los usuarios pueden seleccionar hasta 3 programas de cualquier tipo
     }
 
     // Método para cargar cursos desde el servidor
@@ -434,7 +611,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
         // Realizar petición al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "http://192.168.68.162/AsistenciaApi/obtenerTodosCursos.php";
+        String url = "http://192.168.68.176/AsistenciaApi/obtenerTodosCursos.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
@@ -682,23 +859,35 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         final int interes2Id = listaInteresesIds.get(posInteres2);
         final int interes3Id = listaInteresesIds.get(posInteres3);
 
-        // Convertir los IDs de cursos seleccionados a un formato JSON
-        JSONArray jsonCursos = new JSONArray();
-        for (Integer cursoId : cursosSeleccionados) {
-            jsonCursos.put(cursoId);
+        // Convertir los IDs de cursos seleccionados a un formato con comas (por ejemplo, "202,59")
+        StringBuilder cursosSeleccionadosString = new StringBuilder();
+        for (int i = 0; i < cursosSeleccionados.size(); i++) {
+            cursosSeleccionadosString.append(cursosSeleccionados.get(i));
+            if (i < cursosSeleccionados.size() - 1) {
+                cursosSeleccionadosString.append(",");
+            }
         }
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarEncuesta.php";
+        //String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarEncuesta.php";
+        String url = "http://192.168.68.176/AsistenciaApi/insertarEncuesta.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
                         progressDialog.dismiss();
-                        try {
 
+                        // Imprimir la respuesta completa para depuración
+                        Log.d(TAG, "Respuesta del servidor: " + response);
+
+                        // Mostrar la respuesta sin procesar en un Toast para depuración
+                        Toast.makeText(EncuestasPosRegActivity.this,
+                                "Respuesta: " + response,
+                                Toast.LENGTH_LONG).show();
+
+                        try {
                             JSONObject jsonResponse = new JSONObject(response);
                             boolean success = jsonResponse.getBoolean("success");
                             String message = jsonResponse.getString("message");
@@ -742,7 +931,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                         // Guardar los datos localmente para enviarlos después
                         guardarEncuestaLocalmente(tipoPersona, esRepresentante, nombreEmpresa, nitEmpresa,
                                 telefonoEmpresa, correoEmpresa, proyectoSenaId, interes1Id,
-                                interes2Id, interes3Id, jsonCursos.toString());
+                                interes2Id, interes3Id, cursosSeleccionadosString.toString());
 
                         builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
                             @Override
@@ -767,13 +956,33 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                 params.put("tipo_persona", tipoPersona);
                 params.put("proyecto_sena", String.valueOf(proyectoSenaId));
 
+                // Separar nombres y apellidos del nombre completo
+                if (nombreCompleto != null && !nombreCompleto.isEmpty()) {
+                    // Obtener el primer nombre
+                    int primerEspacio = nombreCompleto.indexOf(' ');
+                    if (primerEspacio > 0) {
+                        // Si hay espacio, divide en primer nombre y el resto
+                        String primerNombre = nombreCompleto.substring(0, primerEspacio);
+                        String restoNombre = nombreCompleto.substring(primerEspacio + 1);
+                        params.put("nombres", primerNombre);
+                        params.put("apellidos", restoNombre);
+                    } else {
+                        // Si no hay espacio, todo es nombre
+                        params.put("nombres", nombreCompleto);
+                        params.put("apellidos", "");
+                    }
+                } else {
+                    params.put("nombres", "");
+                    params.put("apellidos", "");
+                }
+
                 // Intereses
                 params.put("interes1", String.valueOf(interes1Id));
                 params.put("interes2", String.valueOf(interes2Id));
                 params.put("interes3", String.valueOf(interes3Id));
 
-                // Cursos seleccionados
-                params.put("cursos_seleccionados", jsonCursos.toString());
+                // Cursos seleccionados (formato "202,59")
+                params.put("cursos_seleccionados", cursosSeleccionadosString.toString());
 
                 // Si es persona jurídica y representante, enviar datos de la empresa
                 if (tipoPersona.equals("Juridica") && esRepresentante.equals("Si")) {
@@ -784,6 +993,11 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                     params.put("correo_empresa", correoEmpresa);
                 } else {
                     params.put("es_representante", "No");
+                }
+
+                // Imprimir los parámetros para depuración
+                for (Map.Entry<String, String> entry : params.entrySet()) {
+                    Log.d(TAG, "Param: " + entry.getKey() + " = " + entry.getValue());
                 }
 
                 return params;
@@ -804,7 +1018,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                                            String telefonoEmpresa, String correoEmpresa,
                                            int proyectoSenaId, int interes1Id,
                                            int interes2Id, int interes3Id,
-                                           String jsonCursos) {
+                                           String cursosSeleccionados) {
         try {
             // Crear un objeto JSON con todos los datos
             JSONObject jsonData = new JSONObject();
@@ -816,7 +1030,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             jsonData.put("interes1", interes1Id);
             jsonData.put("interes2", interes2Id);
             jsonData.put("interes3", interes3Id);
-            jsonData.put("cursos_seleccionados", jsonCursos);
+            jsonData.put("cursos_seleccionados", cursosSeleccionados);
 
             if (tipoPersona.equals("Juridica") && esRepresentante.equals("Si")) {
                 jsonData.put("es_representante", "Si");
