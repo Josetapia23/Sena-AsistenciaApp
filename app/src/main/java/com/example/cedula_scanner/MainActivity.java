@@ -888,7 +888,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "http://192.168.68.176/AsistenciaApi/insertarCedulaSc.php";
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarCedulaSc.php";
+        //String url = "http://192.168.0.14/AsistenciaApi/insertarCedulaSc.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {

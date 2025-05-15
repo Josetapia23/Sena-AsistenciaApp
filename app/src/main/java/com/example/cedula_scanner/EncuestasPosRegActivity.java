@@ -52,12 +52,18 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
     private Toolbar toolbar;
     private EditText tvNombreCompleto, tvCedula;
-    private EditText etNombreEmpresa, etNitEmpresa, etTelefonoEmpresa, etCorreoEmpresa;
+    private EditText etNombreEmpresa, etNitEmpresa;
     private RadioGroup rgTipoPersona, rgRepresentanteEmpresa;
     private RadioButton rbPersonaNatural, rbPersonaJuridica, rbSiRepresentante, rbNoRepresentante;
-    private LinearLayout layoutPersonaJuridica, layoutDatosEmpresa;
+    private LinearLayout layoutPersonaJuridica, layoutDatosEmpresa, layoutIntereses;
     private Spinner spinnerProyectoSena, spinnerInteres1, spinnerInteres2, spinnerInteres3;
     private Spinner spinnerTipoPrograma;
+
+    // Variables para la funcionalidad de empresas
+    private EmpresaManager empresaManager;
+    private Button btnBuscarEmpresa;
+    private EmpresaManager.Empresa empresaSeleccionada;
+    private Button btnCrearNuevaEmpresa;
 
     // Nuevas variables para la selección mejorada de programas
     private Button btnSeleccionarProgramas;
@@ -100,6 +106,7 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         rbPersonaJuridica = findViewById(R.id.rbPersonaJuridica);
 
         layoutPersonaJuridica = findViewById(R.id.layoutPersonaJuridica);
+        layoutIntereses = findViewById(R.id.layoutIntereses);
 
         rgRepresentanteEmpresa = findViewById(R.id.rgRepresentanteEmpresa);
         rbSiRepresentante = findViewById(R.id.rbSiRepresentante);
@@ -109,8 +116,6 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
         etNombreEmpresa = findViewById(R.id.etNombreEmpresa);
         etNitEmpresa = findViewById(R.id.etNitEmpresa);
-        etTelefonoEmpresa = findViewById(R.id.etTelefonoEmpresa);
-        etCorreoEmpresa = findViewById(R.id.etCorreoEmpresa);
 
         spinnerProyectoSena = findViewById(R.id.spinnerProyectoSena);
         spinnerInteres1 = findViewById(R.id.spinnerInteres1);
@@ -118,6 +123,27 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         spinnerInteres3 = findViewById(R.id.spinnerInteres3);
 
         spinnerTipoPrograma = findViewById(R.id.spinnerTipoPrograma);
+
+        // Inicializar EmpresaManager
+        empresaManager = new EmpresaManager(this);
+
+        // Inicializar botón de búsqueda de empresas
+        btnBuscarEmpresa = findViewById(R.id.btnBuscarEmpresa);
+        btnBuscarEmpresa.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mostrarDialogoBusquedaEmpresa();
+            }
+        });
+
+        // Inicializar botón de crear empresa
+        btnCrearNuevaEmpresa = findViewById(R.id.btnCrearNuevaEmpresa);
+        btnCrearNuevaEmpresa.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                crearYGuardarEmpresa();
+            }
+        });
 
         // Inicializar nuevas vistas para la selección de programas
         btnSeleccionarProgramas = findViewById(R.id.btnSeleccionarProgramas);
@@ -143,10 +169,17 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 if (checkedId == R.id.rbPersonaJuridica) {
+                    // Para personas jurídicas:
+                    // - Mostrar selección de representante
                     layoutPersonaJuridica.setVisibility(View.VISIBLE);
+                    // - Ocultar sección de intereses
+                    layoutIntereses.setVisibility(View.GONE);
                 } else {
-                    layoutPersonaJuridica.setVisibility(View.GONE);
-                    layoutDatosEmpresa.setVisibility(View.GONE);
+                    // Para personas naturales:
+                    // - Mostrar selección de representante
+                    layoutPersonaJuridica.setVisibility(View.VISIBLE);
+                    // - Mostrar sección de intereses
+                    layoutIntereses.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -198,8 +231,8 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             // Si hay datos locales, actualizar el spinner de tipos y filtrar con el primer tipo
             actualizarTiposProgramas();
         }
-
     }
+
     // Método para normalizar la visualización de texto con caracteres especiales
     private String mostrarTexto(String texto) {
         if (texto == null) return "";
@@ -215,6 +248,69 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         }
 
         return texto;
+    }
+
+    // Método para mostrar el diálogo de búsqueda de empresas
+    private void mostrarDialogoBusquedaEmpresa() {
+        SelectorEmpresaDialog dialog = new SelectorEmpresaDialog(this, empresaManager,
+                new SelectorEmpresaDialog.OnEmpresaSelectedListener() {
+                    @Override
+                    public void onEmpresaSelected(EmpresaManager.Empresa empresa) {
+                        // Guardar la empresa seleccionada
+                        empresaSeleccionada = empresa;
+
+                        // Actualizar los campos con la información de la empresa
+                        etNombreEmpresa.setText(empresa.getNombreCorregido());
+                        etNitEmpresa.setText(empresa.nit);
+
+                        Toast.makeText(EncuestasPosRegActivity.this,
+                                "Empresa seleccionada: " + empresa.getNombreCorregido(),
+                                Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onNuevaEmpresa(String nombreEmpresa) {
+                        // Limpiar los campos y establecer solo el nombre para una nueva empresa
+                        etNombreEmpresa.setText(nombreEmpresa);
+                        etNitEmpresa.setText("");
+
+                        // Limpiar referencia a empresa seleccionada
+                        empresaSeleccionada = null;
+
+                        Toast.makeText(EncuestasPosRegActivity.this,
+                                "Nueva empresa: " + nombreEmpresa,
+                                Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onDialogCancelled() {
+                        // No hacer nada cuando se cancela
+                    }
+                });
+
+        dialog.show();
+    }
+
+    private void crearYGuardarEmpresa() {
+        String nombreEmpresa = etNombreEmpresa.getText().toString().trim();
+        String nitEmpresa = etNitEmpresa.getText().toString().trim();
+
+        if (nombreEmpresa.isEmpty()) {
+            etNombreEmpresa.setError("Ingrese el nombre de la empresa");
+            etNombreEmpresa.requestFocus();
+            return;
+        }
+
+        // Crear una nueva empresa usando el empresaManager
+        empresaSeleccionada = empresaManager.crearNuevaEmpresa(
+                nombreEmpresa,  // Nombre
+                nitEmpresa,     // NIT
+                "",             // Teléfono (vacío)
+                "",             // Correo (vacío)
+                ""              // Dirección (vacía)
+        );
+
+        Toast.makeText(this, "Empresa '" + nombreEmpresa + "' guardada localmente", Toast.LENGTH_SHORT).show();
     }
 
     // Clase interna para representar un curso
@@ -611,7 +707,8 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
         // Realizar petición al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "http://192.168.68.176/AsistenciaApi/obtenerTodosCursos.php";
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/obtenerTodosCursos.php";
+        //String url = "http://192.168.0.14/AsistenciaApi/obtenerTodosCursos.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
@@ -767,30 +864,33 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             return;
         }
 
-        // Validar que se hayan seleccionado intereses
-        int posInteres1 = spinnerInteres1.getSelectedItemPosition();
-        int posInteres2 = spinnerInteres2.getSelectedItemPosition();
-        int posInteres3 = spinnerInteres3.getSelectedItemPosition();
+        // Validar que se hayan seleccionado intereses para personas naturales
+        boolean esPersonaJuridica = rbPersonaJuridica.isChecked();
+        if (!esPersonaJuridica) {
+            int posInteres1 = spinnerInteres1.getSelectedItemPosition();
+            int posInteres2 = spinnerInteres2.getSelectedItemPosition();
+            int posInteres3 = spinnerInteres3.getSelectedItemPosition();
 
-        if (posInteres1 == 0) {
-            Toast.makeText(this, "Por favor seleccione su interés principal", Toast.LENGTH_SHORT).show();
-            return;
-        }
+            if (posInteres1 == 0) {
+                Toast.makeText(this, "Por favor seleccione su interés principal", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-        if (posInteres2 == 0) {
-            Toast.makeText(this, "Por favor seleccione su segundo interés", Toast.LENGTH_SHORT).show();
-            return;
-        }
+            if (posInteres2 == 0) {
+                Toast.makeText(this, "Por favor seleccione su segundo interés", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-        if (posInteres3 == 0) {
-            Toast.makeText(this, "Por favor seleccione su tercer interés", Toast.LENGTH_SHORT).show();
-            return;
-        }
+            if (posInteres3 == 0) {
+                Toast.makeText(this, "Por favor seleccione su tercer interés", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-        // Validar que no se repitan los intereses
-        if (posInteres1 == posInteres2 || posInteres1 == posInteres3 || posInteres2 == posInteres3) {
-            Toast.makeText(this, "Por favor, seleccione intereses diferentes", Toast.LENGTH_SHORT).show();
-            return;
+            // Validar que no se repitan los intereses
+            if (posInteres1 == posInteres2 || posInteres1 == posInteres3 || posInteres2 == posInteres3) {
+                Toast.makeText(this, "Por favor, seleccione intereses diferentes", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
         // Validar que se haya seleccionado al menos un programa
@@ -799,43 +899,15 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             return;
         }
 
-        // Si es persona jurídica y representa empresa, validar datos de empresa
-        boolean esPersonaJuridica = rbPersonaJuridica.isChecked();
+        // Si es representante de empresa, validar datos de empresa
         boolean esRepresentanteEmpresa = rbSiRepresentante.isChecked();
 
-        if (esPersonaJuridica && esRepresentanteEmpresa) {
+        if (esRepresentanteEmpresa) {
             String nombreEmpresa = etNombreEmpresa.getText().toString().trim();
-            String nitEmpresa = etNitEmpresa.getText().toString().trim();
-            String telefonoEmpresa = etTelefonoEmpresa.getText().toString().trim();
-            String correoEmpresa = etCorreoEmpresa.getText().toString().trim();
 
             if (nombreEmpresa.isEmpty()) {
                 etNombreEmpresa.setError("Ingrese el nombre de la empresa");
                 etNombreEmpresa.requestFocus();
-                return;
-            }
-
-            if (nitEmpresa.isEmpty()) {
-                etNitEmpresa.setError("Ingrese el NIT de la empresa");
-                etNitEmpresa.requestFocus();
-                return;
-            }
-
-            if (telefonoEmpresa.isEmpty()) {
-                etTelefonoEmpresa.setError("Ingrese el teléfono de la empresa");
-                etTelefonoEmpresa.requestFocus();
-                return;
-            }
-
-            if (correoEmpresa.isEmpty()) {
-                etCorreoEmpresa.setError("Ingrese el correo de la empresa");
-                etCorreoEmpresa.requestFocus();
-                return;
-            }
-
-            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(correoEmpresa).matches()) {
-                etCorreoEmpresa.setError("Formato de correo inválido");
-                etCorreoEmpresa.requestFocus();
                 return;
             }
         }
@@ -851,13 +923,17 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
         final String nombreEmpresa = etNombreEmpresa.getText().toString().trim();
         final String nitEmpresa = etNitEmpresa.getText().toString().trim();
-        final String telefonoEmpresa = etTelefonoEmpresa.getText().toString().trim();
-        final String correoEmpresa = etCorreoEmpresa.getText().toString().trim();
+
+        // Si tenemos una empresa seleccionada, usamos su ID
+        final String idEmpresa = (empresaSeleccionada != null) ?
+                String.valueOf(empresaSeleccionada.id) : "-1";
 
         final int proyectoSenaId = listaProyectosSenaIds.get(posProyecto);
-        final int interes1Id = listaInteresesIds.get(posInteres1);
-        final int interes2Id = listaInteresesIds.get(posInteres2);
-        final int interes3Id = listaInteresesIds.get(posInteres3);
+
+        // Para intereses, solo si es persona natural
+        final int interes1Id = !esPersonaJuridica ? listaInteresesIds.get(spinnerInteres1.getSelectedItemPosition()) : -1;
+        final int interes2Id = !esPersonaJuridica ? listaInteresesIds.get(spinnerInteres2.getSelectedItemPosition()) : -1;
+        final int interes3Id = !esPersonaJuridica ? listaInteresesIds.get(spinnerInteres3.getSelectedItemPosition()) : -1;
 
         // Convertir los IDs de cursos seleccionados a un formato con comas (por ejemplo, "202,59")
         StringBuilder cursosSeleccionadosString = new StringBuilder();
@@ -870,8 +946,8 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        //String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarEncuesta.php";
-        String url = "http://192.168.68.176/AsistenciaApi/insertarEncuesta.php";
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarEncuesta.php";
+        //String url = "http://192.168.0.14/AsistenciaApi/insertarEncuesta.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
@@ -900,7 +976,27 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     if (success) {
-                                        // Volver a la pantalla principal
+                                        // Solo sincronizar empresas si la encuesta se guardó con éxito
+                                        empresaManager.sincronizarNuevasEmpresas(new EmpresaManager.OnSincronizacionCompletaListener() {
+                                            @Override
+                                            public void onSincronizacionCompleta(boolean exitoso, String mensaje) {
+                                                Log.d(TAG, "Sincronización de empresas: " + mensaje);
+                                                // Opcional: mostrar un toast si hay errores
+                                                if (!exitoso) {
+                                                    Toast.makeText(EncuestasPosRegActivity.this,
+                                                            "Algunas empresas no se sincronizaron: " + mensaje,
+                                                            Toast.LENGTH_SHORT).show();
+                                                }
+
+                                                // Volver a la pantalla principal después de sincronizar
+                                                Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
+                                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                                startActivity(intent);
+                                                finish();
+                                            }
+                                        });
+                                    } else {
+                                        // Si no se guardó correctamente, solo volver a la pantalla principal sin sincronizar
                                         Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
                                         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                         startActivity(intent);
@@ -930,8 +1026,8 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
                         // Guardar los datos localmente para enviarlos después
                         guardarEncuestaLocalmente(tipoPersona, esRepresentante, nombreEmpresa, nitEmpresa,
-                                telefonoEmpresa, correoEmpresa, proyectoSenaId, interes1Id,
-                                interes2Id, interes3Id, cursosSeleccionadosString.toString());
+                                proyectoSenaId, interes1Id, interes2Id, interes3Id,
+                                cursosSeleccionadosString.toString(), idEmpresa);
 
                         builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
                             @Override
@@ -976,21 +1072,28 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                     params.put("apellidos", "");
                 }
 
-                // Intereses
-                params.put("interes1", String.valueOf(interes1Id));
-                params.put("interes2", String.valueOf(interes2Id));
-                params.put("interes3", String.valueOf(interes3Id));
+                // Intereses (si es persona natural)
+                if (!tipoPersona.equals("Juridica")) {
+                    params.put("interes1", String.valueOf(interes1Id));
+                    params.put("interes2", String.valueOf(interes2Id));
+                    params.put("interes3", String.valueOf(interes3Id));
+                } else {
+                    params.put("interes1", "-1");
+                    params.put("interes2", "-1");
+                    params.put("interes3", "-1");
+                }
 
                 // Cursos seleccionados (formato "202,59")
                 params.put("cursos_seleccionados", cursosSeleccionadosString.toString());
 
-                // Si es persona jurídica y representante, enviar datos de la empresa
-                if (tipoPersona.equals("Juridica") && esRepresentante.equals("Si")) {
+                // Si es representante de empresa (jurídica o natural)
+                if (esRepresentante.equals("Si")) {
                     params.put("es_representante", "Si");
                     params.put("nombre_empresa", nombreEmpresa);
                     params.put("nit_empresa", nitEmpresa);
-                    params.put("telefono_empresa", telefonoEmpresa);
-                    params.put("correo_empresa", correoEmpresa);
+
+                    // Añadir el ID de la empresa (si existe)
+                    params.put("id_empresa", idEmpresa);
                 } else {
                     params.put("es_representante", "No");
                 }
@@ -1015,10 +1118,9 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
     private void guardarEncuestaLocalmente(String tipoPersona, String esRepresentante,
                                            String nombreEmpresa, String nitEmpresa,
-                                           String telefonoEmpresa, String correoEmpresa,
                                            int proyectoSenaId, int interes1Id,
                                            int interes2Id, int interes3Id,
-                                           String cursosSeleccionados) {
+                                           String cursosSeleccionados, String idEmpresa) {
         try {
             // Crear un objeto JSON con todos los datos
             JSONObject jsonData = new JSONObject();
@@ -1027,17 +1129,27 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             jsonData.put("idSubevento", idSubevento);
             jsonData.put("tipo_persona", tipoPersona);
             jsonData.put("proyecto_sena", proyectoSenaId);
-            jsonData.put("interes1", interes1Id);
-            jsonData.put("interes2", interes2Id);
-            jsonData.put("interes3", interes3Id);
+
+            // Intereses (solo para persona natural)
+            if (!tipoPersona.equals("Juridica")) {
+                jsonData.put("interes1", interes1Id);
+                jsonData.put("interes2", interes2Id);
+                jsonData.put("interes3", interes3Id);
+            } else {
+                jsonData.put("interes1", -1);
+                jsonData.put("interes2", -1);
+                jsonData.put("interes3", -1);
+            }
+
             jsonData.put("cursos_seleccionados", cursosSeleccionados);
 
-            if (tipoPersona.equals("Juridica") && esRepresentante.equals("Si")) {
+            if (esRepresentante.equals("Si")) {
                 jsonData.put("es_representante", "Si");
                 jsonData.put("nombre_empresa", nombreEmpresa);
                 jsonData.put("nit_empresa", nitEmpresa);
-                jsonData.put("telefono_empresa", telefonoEmpresa);
-                jsonData.put("correo_empresa", correoEmpresa);
+
+                // Guardar el ID de la empresa
+                jsonData.put("id_empresa", idEmpresa);
             } else {
                 jsonData.put("es_representante", "No");
             }

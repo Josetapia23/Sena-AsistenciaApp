@@ -528,8 +528,8 @@ public class about extends AppCompatActivity {
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
 
         // URL del servidor - verificar que sea la correcta
-        // String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarCedulaSc.php";
-        String url = "http://192.168.68.176/AsistenciaApi/insertarCedulaSc.php"; // Cambia a tu URL local si estás probando
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarCedulaSc.php";
+        //String url = "http://192.168.0.14/AsistenciaApi/insertarCedulaSc.php";
 
         Log.d("URL_DEBUG", "URL del servidor: " + url);
 
