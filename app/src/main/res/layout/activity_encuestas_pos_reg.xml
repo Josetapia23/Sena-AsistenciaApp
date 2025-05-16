@@ -119,7 +119,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Sección Persona Jurídica (inicialmente oculta) -->
+            <!-- Sección Persona Jurídica -->
             <LinearLayout
                 android:id="@+id/layoutPersonaJuridica"
                 android:layout_width="match_parent"
@@ -130,7 +130,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="¿Es representante de una empresa?"
+                    android:text="¿Usted viene en representación de una empresa?"
                     android:textSize="16sp"
                     android:textStyle="bold"/>
 
@@ -215,26 +215,60 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Proyectos SENA (para ambos tipos de persona) -->
-            <TextView
+            <!-- Proyectos SENA (con ID para controlarlo) -->
+            <LinearLayout
+                android:id="@+id/sectionProyectoSena"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Seleccione el proyecto SENA al que quiere pertenecer:"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginTop="16dp"/>
+                android:orientation="vertical">
 
-            <Spinner
-                android:id="@+id/spinnerProyectoSena"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"/>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Seleccione el proyecto SENA al que quiere pertenecer:"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"/>
 
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="15dp" />
+                <Spinner
+                    android:id="@+id/spinnerProyectoSena"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"/>
+
+                <!-- Campo para mostrar cuando se selecciona Fortalecimiento Empresarial -->
+                <LinearLayout
+                    android:id="@+id/layoutFortalecimientoEmpresarial"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="8dp">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilRequerimientoFortalecimiento"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+
+                        <EditText
+                            android:id="@+id/etRequerimientoFortalecimiento"
+                            style="@style/Widget.MaterialComponents.TextInputEditText.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Que requiere de la Entidad o en que le podemos apoyar desde el SENA"
+                            android:inputType="textMultiLine"
+                            android:minLines="3" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <Space
+                    android:layout_width="match_parent"
+                    android:layout_height="15dp" />
+            </LinearLayout>
 
             <!-- Selección de intereses (para personas naturales) -->
             <LinearLayout
@@ -308,61 +342,33 @@
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- SECCIÓN MODIFICADA: Selección de Programas del SENA -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Seleccione los programas del SENA que le interesan:"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginTop="16dp"/>
-
-            <!-- Spinner para filtrar por tipo de programa -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Filtrar por tipo de programa:"
-                android:layout_marginTop="8dp"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"/>
-
-            <Spinner
-                android:id="@+id/spinnerTipoPrograma"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"/>
-
-            <!-- Botón para abrir selector de programas -->
-            <Button
-                android:id="@+id/btnSeleccionarProgramas"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"
-                android:text="Seleccionar programas (máximo 3)" />
-
-            <!-- Área para mostrar programas seleccionados -->
+            <!-- Nueva sección para Tipo de Programa (solo se muestra si interés es "Estudiar") -->
             <LinearLayout
-                android:id="@+id/layoutProgramasSeleccionados"
+                android:id="@+id/sectionTipoPrograma"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="8dp"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp">
+                android:visibility="gone">
 
                 <TextView
-                    android:id="@+id/tvProgramasSeleccionados"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="No hay programas seleccionados"
-                    android:textStyle="italic"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="16dp"/>
+                    android:text="Seleccione el tipo de programa que desea estudiar:"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"/>
 
+                <Spinner
+                    android:id="@+id/spinnerTipoPrograma"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"/>
+
+                <Space
+                    android:layout_width="match_parent"
+                    android:layout_height="15dp" />
             </LinearLayout>
 
             <Space
