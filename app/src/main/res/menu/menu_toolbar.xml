@@ -13,4 +13,10 @@
     <item
         android:id="@+id/itemCerrarSesion"
         android:title="Cerrar Sesión" />
+
+    <item
+        android:id="@+id/menu_sincronizar"
+        android:title="Sincronizar Encuestas"
+        android:icon="@android:drawable/ic_popup_sync"
+        app:showAsAction="ifRoom" />
 </menu>

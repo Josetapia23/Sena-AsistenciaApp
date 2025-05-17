@@ -13,7 +13,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -36,17 +35,14 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -54,18 +50,17 @@ public class about extends AppCompatActivity {
 
     // Referencias a los campos de la UI
     private EditText tvDocumentID, tvNombres, tvApellidos, tvFechaNacimiento;
-    private EditText tvEdad, tvNacionalidad, editCorreo, tvTelefono, tvDireccion;
+    private EditText tvEdad, tvNacionalidad, editCorreo, tvTelefono, tvDireccion, tvDepartamento;
     private AutoCompleteTextView tvGenero, tvTipoSangre;
     private RadioGroup rgTipoDocumento;
     private RadioButton rbCC, rbTI, rbEX;
     private Button btnRegistrar;
     private Toolbar toolbar;
     private Calendar calendar;
-    // Variables para departamentos y municipios
-    private Spinner spinnerDepartamento, spinnerMunicipio;
-    private List<String> listaDepartamentos = new ArrayList<>();
-    private Map<String, List<String>> mapaMunicipiosPorDepartamento = new HashMap<>();
-    private Map<String, Integer> mapaMunicipiosIds = new HashMap<>();
+
+    // Variable para el municipio
+    private Spinner spinnerMunicipio;
+    private MunicipiosManager municipiosManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,12 +86,14 @@ public class about extends AppCompatActivity {
         rbCC = findViewById(R.id.rbCC);
         rbTI = findViewById(R.id.rbTI);
         rbEX = findViewById(R.id.rbEX);
-        // Inicializar los spinners de departamento y municipio
-        spinnerDepartamento = findViewById(R.id.spinnerDepartamento);
+
+        // Inicializar departamento (fijo) y spinner de municipio
+        tvDepartamento = findViewById(R.id.tvDepartamento);
         spinnerMunicipio = findViewById(R.id.spinnerMunicipio);
 
-        // Cargar datos geográficos y configurar adaptadores
-        inicializarSpinnersDepartamentoMunicipio();
+        // Inicializar el gestor de municipios
+        municipiosManager = new MunicipiosManager(this);
+        municipiosManager.cargarMunicipiosEnSpinner(spinnerMunicipio);
 
         // Configurar desplegables
         setupDropdowns();
@@ -214,181 +211,6 @@ public class about extends AppCompatActivity {
         return super.onOptionsItemSelected(menuItem);
     }
 
-    // Método para inicializar los spinners de departamento y municipio
-    private void inicializarSpinnersDepartamentoMunicipio() {
-        // Crear una lista para los departamentos con un ítem inicial
-        List<String> listaDeptConSeleccion = new ArrayList<>();
-        listaDeptConSeleccion.add("Seleccione departamento");
-
-        // Configurar adaptadores iniciales
-        ArrayAdapter<String> adapterDepartamentos = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, listaDeptConSeleccion);
-        spinnerDepartamento.setAdapter(adapterDepartamentos);
-
-        // Lista vacía para municipios con mensaje inicial
-        List<String> listaMuniInicial = new ArrayList<>();
-        listaMuniInicial.add("Seleccione primero un departamento");
-
-        ArrayAdapter<String> adapterMunicipios = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, listaMuniInicial);
-        spinnerMunicipio.setAdapter(adapterMunicipios);
-
-        // Cargar datos geográficos
-        cargarDatosGeograficosDesdeCache();
-
-        // Listener para el cambio de departamento
-        spinnerDepartamento.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position == 0) {
-                    // Si seleccionaron la opción "Seleccione departamento"
-                    List<String> listaMuniVacia = new ArrayList<>();
-                    listaMuniVacia.add("Seleccione primero un departamento");
-
-                    ArrayAdapter<String> adapterMunicipiosVacio = new ArrayAdapter<>(
-                            about.this,
-                            android.R.layout.simple_spinner_dropdown_item,
-                            listaMuniVacia);
-                    spinnerMunicipio.setAdapter(adapterMunicipiosVacio);
-                } else {
-                    // Posición - 1 porque tenemos el item "Seleccione departamento" al inicio
-                    String departamentoSeleccionado = listaDepartamentos.get(position - 1);
-                    actualizarSpinnerMunicipios(departamentoSeleccionado);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // No hacer nada
-            }
-        });
-    }
-
-    // Método para cargar datos geográficos desde caché
-    private void cargarDatosGeograficosDesdeCache() {
-        SharedPreferences prefs = getSharedPreferences("DatosMunicipios", MODE_PRIVATE);
-        String datosJson = prefs.getString("departamentos_json", null);
-
-        if (datosJson != null) {
-            try {
-                // Procesar los datos guardados en caché
-                Log.d("about", "Usando datos geográficos de caché");
-                procesarDatosDepartamentosMunicipios(new JSONObject(datosJson));
-            } catch (JSONException e) {
-                Log.e("about", "Error al procesar datos de caché: " + e.getMessage());
-                // Si hay un error en los datos de caché, mostrar mensaje
-                Toast.makeText(about.this,
-                        "Error al cargar datos geográficos. Por favor regrese y seleccione un evento nuevamente.",
-                        Toast.LENGTH_LONG).show();
-            }
-        } else {
-            // No hay datos en caché, mostrar mensaje
-            Log.e("about", "No se encontraron datos geográficos en caché");
-            Toast.makeText(about.this,
-                    "Datos geográficos no disponibles. Por favor regrese y seleccione un evento nuevamente.",
-                    Toast.LENGTH_LONG).show();
-        }
-    }
-
-    // Método para procesar los datos de departamentos y municipios desde JSON
-    private void procesarDatosDepartamentosMunicipios(JSONObject jsonObject) {
-        try {
-            // Limpiar datos existentes
-            listaDepartamentos.clear();
-            mapaMunicipiosPorDepartamento.clear();
-            mapaMunicipiosIds.clear();
-
-            // Procesar el array de departamentos
-            JSONArray departamentosArray = jsonObject.getJSONArray("departamentos");
-
-            for (int i = 0; i < departamentosArray.length(); i++) {
-                JSONObject departamentoObj = departamentosArray.getJSONObject(i);
-                String nombreDepartamento = decodificarTexto(departamentoObj.getString("nombre"));
-
-                // Añadir a la lista de departamentos
-                listaDepartamentos.add(nombreDepartamento);
-
-                // Procesar los municipios de este departamento
-                JSONArray municipiosArray = departamentoObj.getJSONArray("municipios");
-                List<String> municipiosDelDepartamento = new ArrayList<>();
-
-                // Añadir opción "Seleccione municipio" al inicio
-                municipiosDelDepartamento.add("Seleccione municipio");
-
-                for (int j = 0; j < municipiosArray.length(); j++) {
-                    JSONObject municipioObj = municipiosArray.getJSONObject(j);
-                    int idMunicipio = municipioObj.getInt("id");
-                    String nombreMunicipio = decodificarTexto(municipioObj.getString("nombre"));
-
-                    // Añadir a la lista de municipios de este departamento
-                    municipiosDelDepartamento.add(nombreMunicipio);
-
-                    // Guardar la relación nombre-id del municipio
-                    mapaMunicipiosIds.put(nombreMunicipio, idMunicipio);
-                }
-
-                // Guardar la lista de municipios para este departamento
-                mapaMunicipiosPorDepartamento.put(nombreDepartamento, municipiosDelDepartamento);
-            }
-
-            // Crear lista con opción inicial
-            List<String> listaDeptConSeleccion = new ArrayList<>();
-            listaDeptConSeleccion.add("Seleccione departamento");
-            listaDeptConSeleccion.addAll(listaDepartamentos);
-
-            // Actualizar el spinner de departamentos
-            ArrayAdapter<String> adapterDepartamentos = new ArrayAdapter<>(
-                    about.this,
-                    android.R.layout.simple_spinner_dropdown_item,
-                    listaDeptConSeleccion);
-            spinnerDepartamento.setAdapter(adapterDepartamentos);
-
-            // Seleccionar la opción inicial "Seleccione departamento"
-            spinnerDepartamento.setSelection(0);
-
-        } catch (JSONException e) {
-            Log.e("about", "Error al procesar JSON de departamentos: " + e.getMessage());
-            Toast.makeText(about.this,
-                    "Error al procesar datos geográficos",
-                    Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    // Método para actualizar el spinner de municipios según el departamento seleccionado
-    private void actualizarSpinnerMunicipios(String departamento) {
-        List<String> municipiosDelDepartamento = mapaMunicipiosPorDepartamento.get(departamento);
-
-        if (municipiosDelDepartamento != null && !municipiosDelDepartamento.isEmpty()) {
-            ArrayAdapter<String> adapterMunicipios = new ArrayAdapter<>(
-                    about.this,
-                    android.R.layout.simple_spinner_dropdown_item,
-                    municipiosDelDepartamento);
-            spinnerMunicipio.setAdapter(adapterMunicipios);
-            // Seleccionar "Seleccione municipio"
-            spinnerMunicipio.setSelection(0);
-        } else {
-            // Si no hay municipios, mostrar lista vacía con mensaje
-            List<String> noMunicipios = new ArrayList<>();
-            noMunicipios.add("No hay municipios disponibles");
-
-            spinnerMunicipio.setAdapter(new ArrayAdapter<>(
-                    about.this,
-                    android.R.layout.simple_spinner_dropdown_item,
-                    noMunicipios));
-        }
-    }
-
-    // Método para decodificar texto con caracteres especiales
-    private String decodificarTexto(String texto) {
-        try {
-            // Intenta diferentes métodos de decodificación hasta encontrar el correcto
-            return new String(texto.getBytes("ISO-8859-1"), "UTF-8");
-        } catch (Exception e) {
-            Log.e("Codificación", "Error al decodificar texto: " + e.getMessage());
-            return texto; // Devuelve el original si falla
-        }
-    }
-
     private void insertarAsistencia(String idEvento) {
         // Obtener también el ID del subevento desde SharedPreferences
         SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
@@ -426,23 +248,14 @@ public class about extends AppCompatActivity {
         String telefono = tvTelefono.getText().toString().trim();
         String direccion = tvDireccion.getText().toString().trim();
 
-        // Obtener departamento y municipio seleccionados - declarados como final
-        final String departamento;
+        // Obtener departamento (fijo: "ATLÁNTICO") y municipio seleccionado
+        final String departamento = tvDepartamento.getText().toString().trim();
         final String municipio;
 
-        // Verificar que no esté seleccionada la opción "Seleccione departamento"
-        if (spinnerDepartamento.getSelectedItemPosition() > 0) {
-            // Posición - 1 porque agregamos "Seleccione departamento" al inicio
-            departamento = listaDepartamentos.get(spinnerDepartamento.getSelectedItemPosition() - 1);
-
-            // Verificar que no esté seleccionada la opción "Seleccione municipio"
-            if (spinnerMunicipio.getSelectedItemPosition() > 0) {
-                municipio = spinnerMunicipio.getSelectedItem().toString();
-            } else {
-                municipio = "";
-            }
+        // Verificar que no esté seleccionada la opción "Seleccione municipio"
+        if (spinnerMunicipio.getSelectedItemPosition() > 0) {
+            municipio = spinnerMunicipio.getSelectedItem().toString();
         } else {
-            departamento = "";
             municipio = "";
         }
 
@@ -487,13 +300,9 @@ public class about extends AppCompatActivity {
             return;
         }
 
-        // Validar que se haya seleccionado departamento y municipio válidos
-        if (departamento.isEmpty() || municipio.isEmpty() ||
-                municipio.equals("Seleccione municipio") ||
-                municipio.equals("Seleccione primero un departamento") ||
-                municipio.equals("No hay municipios disponibles")) {
-
-            Toast.makeText(this, "Por favor seleccione departamento y municipio válidos", Toast.LENGTH_SHORT).show();
+        // Validar que se haya seleccionado un municipio válido
+        if (municipio.isEmpty() || municipio.equals("Seleccione municipio")) {
+            Toast.makeText(this, "Por favor seleccione un municipio", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -529,7 +338,7 @@ public class about extends AppCompatActivity {
 
         // URL del servidor - verificar que sea la correcta
         String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarCedulaSc.php";
-        //String url = "http://192.168.0.14/AsistenciaApi/insertarCedulaSc.php";
+        //String url = "http://192.168.0.188/AsistenciaApi/insertarCedulaSc.php";
 
         Log.d("URL_DEBUG", "URL del servidor: " + url);
 
@@ -673,28 +482,5 @@ public class about extends AppCompatActivity {
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
         queue.add(stringRequest);
-
-    /* Solución temporal para probar (descomentar si necesitas probar la interfaz sin servidor)
-    // Comentar la línea queue.add(stringRequest) y descomentar este bloque para pruebas
-    new Handler().postDelayed(new Runnable() {
-        @Override
-        public void run() {
-            progressDialog.dismiss();
-
-            AlertDialog.Builder builder = new AlertDialog.Builder(about.this);
-            builder.setTitle("Éxito (Simulado)");
-            builder.setMessage("Asistencia registrada correctamente.");
-            builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    Intent intent = new Intent(about.this, AccionesMainActivity.class);
-                    startActivity(intent);
-                    finish();
-                }
-            });
-            builder.show();
-        }
-    }, 2000); // Simular una demora de 2 segundos
-    */
     }
 }

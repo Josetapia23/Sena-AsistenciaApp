@@ -82,6 +82,22 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     private LinearLayout layoutFortalecimientoEmpresarial;
     private EditText etRequerimientoFortalecimiento;
 
+    private List<String> listaInteresesFiltrada1;
+    private List<String> listaInteresesFiltrada2;
+    private List<String> listaInteresesFiltrada3;
+    private List<Integer> listaInteresesIdsFiltrada1;
+    private List<Integer> listaInteresesIdsFiltrada2;
+    private List<Integer> listaInteresesIdsFiltrada3;
+    private ArrayAdapter<String> adapterInteres1;
+    private ArrayAdapter<String> adapterInteres2;
+    private ArrayAdapter<String> adapterInteres3;
+    private String seleccionInteres1 = "";
+    private String seleccionInteres2 = "";
+    private String seleccionInteres3 = "";
+    private int seleccionInteresId1 = -1;
+    private int seleccionInteresId2 = -1;
+    private int seleccionInteresId3 = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -365,45 +381,42 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
 
 
+    // Este método reemplaza tu método actual cargarDatosSpinners()
     private void cargarDatosSpinners() {
-        // Cargar lista de intereses de la Red de Oportunidades
-        listaInteresesIds.add(-1);
-        listaIntereses.add("Seleccione una opción...");
+        // 1. Cargar datos originales como lo tenías
+        cargarListasOriginales();
 
-        // Añadir intereses según la tabla que mostraste
-        listaInteresesIds.add(1);
-        listaIntereses.add("Encontrar un empleo");
+        // 2. Crear listas filtradas para cada spinner (inicialmente iguales a la original)
+        listaInteresesFiltrada1 = new ArrayList<>(listaIntereses);
+        listaInteresesFiltrada2 = new ArrayList<>(listaIntereses);
+        listaInteresesFiltrada3 = new ArrayList<>(listaIntereses);
 
-        listaInteresesIds.add(2);
-        listaIntereses.add("Emprender");
+        listaInteresesIdsFiltrada1 = new ArrayList<>(listaInteresesIds);
+        listaInteresesIdsFiltrada2 = new ArrayList<>(listaInteresesIds);
+        listaInteresesIdsFiltrada3 = new ArrayList<>(listaInteresesIds);
 
-        listaInteresesIds.add(3);
-        listaIntereses.add("Fortalecer mi negocio");
+        // 3. Crear adaptadores independientes para cada spinner
+        adapterInteres1 = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, listaInteresesFiltrada1);
+        adapterInteres1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        listaInteresesIds.add(4);
-        listaIntereses.add("Encontrar una práctica laboral");
+        adapterInteres2 = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, listaInteresesFiltrada2);
+        adapterInteres2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        listaInteresesIds.add(5);
-        listaIntereses.add("Estudiar");
+        adapterInteres3 = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, listaInteresesFiltrada3);
+        adapterInteres3.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        listaInteresesIds.add(6);
-        listaIntereses.add("Certificar mi conocimiento empírico");
+        // 4. Configurar los adaptadores a los spinners
+        spinnerInteres1.setAdapter(adapterInteres1);
+        spinnerInteres2.setAdapter(adapterInteres2);
+        spinnerInteres3.setAdapter(adapterInteres3);
 
-        listaInteresesIds.add(7);
-        listaIntereses.add("Graduarme del SENA");
+        // 5. Configurar listeners para los spinners
+        configurarListenersSpinners();
 
-        listaInteresesIds.add(8);
-        listaIntereses.add("Cambiar de oficio");
-
-        // Crear adaptador para los spinners de intereses
-        ArrayAdapter<String> adapterIntereses = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, listaIntereses);
-        adapterIntereses.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-        spinnerInteres1.setAdapter(adapterIntereses);
-        spinnerInteres2.setAdapter(adapterIntereses);
-        spinnerInteres3.setAdapter(adapterIntereses);
-
+        // 6. El resto del código de carga (proyectos SENA, tipos de programas) permanece igual
         // Cargar lista de proyectos SENA (con nuevas opciones)
         listaProyectosSenaIds.add(-1);
         listaProyectosSena.add("Seleccione un proyecto...");
@@ -447,6 +460,181 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         adapterTipos.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         spinnerTipoPrograma.setAdapter(adapterTipos);
+    }
+
+    // Este es un nuevo método que debes añadir
+    private void cargarListasOriginales() {
+        // Limpiar listas primero para evitar duplicados si se llama múltiples veces
+        listaInteresesIds.clear();
+        listaIntereses.clear();
+
+        // Cargar lista de intereses de la Red de Oportunidades
+        listaInteresesIds.add(-1);
+        listaIntereses.add("Seleccione una opción...");
+
+        // Añadir intereses según la tabla que mostraste
+        listaInteresesIds.add(1);
+        listaIntereses.add("Encontrar un empleo");
+
+        listaInteresesIds.add(2);
+        listaIntereses.add("Emprender");
+
+        listaInteresesIds.add(3);
+        listaIntereses.add("Fortalecer mi negocio");
+
+        listaInteresesIds.add(4);
+        listaIntereses.add("Encontrar una práctica laboral");
+
+        listaInteresesIds.add(5);
+        listaIntereses.add("Estudiar");
+
+        listaInteresesIds.add(6);
+        listaIntereses.add("Certificar mi conocimiento empírico");
+
+        listaInteresesIds.add(7);
+        listaIntereses.add("Graduarme del SENA");
+
+        listaInteresesIds.add(8);
+        listaIntereses.add("Cambiar de oficio");
+    }
+
+
+    private void configurarListenersSpinners() {
+        // Configurar el listener para el primer spinner
+        spinnerInteres1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // Guardar la selección actual
+                seleccionInteres1 = listaInteresesFiltrada1.get(position);
+                seleccionInteresId1 = listaInteresesIdsFiltrada1.get(position);
+
+                // Actualizar los otros spinners
+                actualizarSpinnersIntereses();
+
+                // Mostrar sección de tipo de programa si selecciona "Estudiar"
+                if (seleccionInteres1.equals("Estudiar")) {
+                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.VISIBLE);
+                } else if (!seleccionInteres2.equals("Estudiar") && !seleccionInteres3.equals("Estudiar")) {
+                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                seleccionInteres1 = "Seleccione una opción...";
+                seleccionInteresId1 = -1;
+            }
+        });
+
+        // Configurar el listener para el segundo spinner
+        spinnerInteres2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // Guardar la selección actual
+                seleccionInteres2 = listaInteresesFiltrada2.get(position);
+                seleccionInteresId2 = listaInteresesIdsFiltrada2.get(position);
+
+                // Actualizar los otros spinners
+                actualizarSpinnersIntereses();
+
+                // Mostrar sección de tipo de programa si selecciona "Estudiar"
+                if (seleccionInteres2.equals("Estudiar")) {
+                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.VISIBLE);
+                } else if (!seleccionInteres1.equals("Estudiar") && !seleccionInteres3.equals("Estudiar")) {
+                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                seleccionInteres2 = "Seleccione una opción...";
+                seleccionInteresId2 = -1;
+            }
+        });
+
+        // Configurar el listener para el tercer spinner
+        spinnerInteres3.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // Guardar la selección actual
+                seleccionInteres3 = listaInteresesFiltrada3.get(position);
+                seleccionInteresId3 = listaInteresesIdsFiltrada3.get(position);
+
+                // Mostrar sección de tipo de programa si selecciona "Estudiar"
+                if (seleccionInteres3.equals("Estudiar")) {
+                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.VISIBLE);
+                } else if (!seleccionInteres1.equals("Estudiar") && !seleccionInteres2.equals("Estudiar")) {
+                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                seleccionInteres3 = "Seleccione una opción...";
+                seleccionInteresId3 = -1;
+            }
+        });
+    }
+
+
+    private void actualizarSpinnersIntereses() {
+        // Guardar las selecciones actuales antes de actualizar los adaptadores
+        int posicionSpinner2 = spinnerInteres2.getSelectedItemPosition();
+        int posicionSpinner3 = spinnerInteres3.getSelectedItemPosition();
+
+        // 1. Reiniciar las listas filtradas para spinner 2 y 3
+        listaInteresesFiltrada2.clear();
+        listaInteresesIdsFiltrada2.clear();
+        listaInteresesFiltrada3.clear();
+        listaInteresesIdsFiltrada3.clear();
+
+        // 2. Repoblar las listas filtradas excluyendo las selecciones actuales
+        // Para spinner 2, excluir la selección del spinner 1
+        for (int i = 0; i < listaIntereses.size(); i++) {
+            String interes = listaIntereses.get(i);
+            int interesId = listaInteresesIds.get(i);
+
+            // Si es la primera opción (Seleccione...) o si no es la opción seleccionada en spinner 1
+            if (interesId == -1 || !interes.equals(seleccionInteres1) || seleccionInteresId1 == -1) {
+                listaInteresesFiltrada2.add(interes);
+                listaInteresesIdsFiltrada2.add(interesId);
+            }
+        }
+
+        // Para spinner 3, excluir las selecciones de spinner 1 y 2
+        for (int i = 0; i < listaIntereses.size(); i++) {
+            String interes = listaIntereses.get(i);
+            int interesId = listaInteresesIds.get(i);
+
+            // Si es la primera opción o si no es la opción seleccionada en spinner 1 ni spinner 2
+            if (interesId == -1 ||
+                    ((!interes.equals(seleccionInteres1) || seleccionInteresId1 == -1) &&
+                            (!interes.equals(seleccionInteres2) || seleccionInteresId2 == -1))) {
+                listaInteresesFiltrada3.add(interes);
+                listaInteresesIdsFiltrada3.add(interesId);
+            }
+        }
+
+        // 3. Notificar a los adaptadores que los datos han cambiado
+        adapterInteres2.notifyDataSetChanged();
+        adapterInteres3.notifyDataSetChanged();
+
+        // 4. Intentar mantener las mismas selecciones si aún están disponibles
+        try {
+            if (posicionSpinner2 >= 0 && posicionSpinner2 < listaInteresesFiltrada2.size()) {
+                spinnerInteres2.setSelection(posicionSpinner2);
+            } else {
+                spinnerInteres2.setSelection(0); // Seleccionar primera opción
+            }
+
+            if (posicionSpinner3 >= 0 && posicionSpinner3 < listaInteresesFiltrada3.size()) {
+                spinnerInteres3.setSelection(posicionSpinner3);
+            } else {
+                spinnerInteres3.setSelection(0); // Seleccionar primera opción
+            }
+        } catch (Exception e) {
+            Log.e("EncuestasPosReg", "Error al actualizar selección de spinners: " + e.getMessage());
+        }
     }
 
     // Método para actualizar el spinner de tipos de programas
@@ -571,8 +759,15 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             }
 
             // Validar que no se repitan los intereses
-            if (posInteres1 == posInteres2 || posInteres1 == posInteres3 || posInteres2 == posInteres3) {
-                Toast.makeText(this, "Por favor, seleccione intereses diferentes", Toast.LENGTH_SHORT).show();
+            String interes1 = spinnerInteres1.getSelectedItem().toString();
+            String interes2 = spinnerInteres2.getSelectedItem().toString();
+            String interes3 = spinnerInteres3.getSelectedItem().toString();
+
+            // Verificamos si alguno es "Seleccione una opción..." o si están repetidos
+            if (interes1.equals("Seleccione una opción...") ||
+                    interes2.equals("Seleccione una opción...") ||
+                    interes3.equals("Seleccione una opción...")) {
+                Toast.makeText(this, "Por favor, seleccione todos sus intereses", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -636,8 +831,8 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
         // Enviar datos al servidor
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        //String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarEncuesta.php";
-        String url = "http://192.168.0.145/AsistenciaApi/insertarEncuesta.php";
+        String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarEncuesta.php";
+        //String url = "http://192.168.0.14/AsistenciaApi/insertarEncuesta.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
@@ -649,9 +844,9 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                         //Log.d(TAG, "Respuesta del servidor: " + response);
 
                         // Mostrar la respuesta sin procesar en un Toast para depuración
-                        Toast.makeText(EncuestasPosRegActivity.this,
-                                "Respuesta: " + response,
-                                Toast.LENGTH_LONG).show();
+//                        Toast.makeText(EncuestasPosRegActivity.this,
+//                                "Respuesta: " + response,
+//                                Toast.LENGTH_LONG).show();
 
                         try {
                             JSONObject jsonResponse = new JSONObject(response);
@@ -870,22 +1065,12 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                 jsonData.put("es_representante", "No");
             }
 
-            // Guardar en SharedPreferences
-            SharedPreferences prefs = getSharedPreferences("EncuestasPendientes", MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-
-            // Obtener encuestas pendientes previas
-            String encuestasPendientesJson = prefs.getString("encuestas", "[]");
-            JSONArray encuestasPendientes = new JSONArray(encuestasPendientesJson);
-
-            // Agregar la nueva encuesta
-            encuestasPendientes.put(jsonData);
-
-            // Guardar el array actualizado
-            editor.putString("encuestas", encuestasPendientes.toString());
-            editor.apply();
+            // Usar el gestor de encuestas pendientes para guardar
+            EncuestasPendientesManager encuestasPendientesManager = new EncuestasPendientesManager(this);
+            encuestasPendientesManager.guardarEncuestaPendiente(jsonData);
 
             Log.d(TAG, "Encuesta guardada localmente: " + jsonData.toString());
+            Toast.makeText(this, "Encuesta guardada localmente. Se sincronizará cuando haya conexión.", Toast.LENGTH_SHORT).show();
 
         } catch (JSONException e) {
             Log.e(TAG, "Error al guardar encuesta localmente: " + e.getMessage());
@@ -895,19 +1080,66 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Mostrar alerta antes de salir sin guardar
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("¿Salir sin guardar?");
-        builder.setMessage("Si sale ahora, no se guardarán los datos de la encuesta.");
-        builder.setPositiveButton("Salir", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
-                startActivity(intent);
-                finish();
-            }
-        });
-        builder.setNegativeButton("Cancelar", null);
-        builder.show();
+        // Verificar si hay encuestas pendientes y hay conexión a internet
+        EncuestasPendientesManager encuestasPendientesManager = new EncuestasPendientesManager(this);
+        if (encuestasPendientesManager.hayEncuestasPendientes() && encuestasPendientesManager.hayConexionInternet()) {
+            // Mostrar alerta para sincronizar las encuestas pendientes
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Encuestas pendientes");
+            builder.setMessage("Hay encuestas pendientes de sincronización. ¿Desea sincronizarlas ahora?");
+
+            builder.setPositiveButton("Sincronizar", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    // Mostrar diálogo de progreso
+                    ProgressDialog progressDialog = new ProgressDialog(EncuestasPosRegActivity.this);
+                    progressDialog.setMessage("Sincronizando encuestas pendientes...");
+                    progressDialog.setCancelable(false);
+                    progressDialog.show();
+
+                    // Sincronizar encuestas pendientes
+                    encuestasPendientesManager.sincronizarEncuestasPendientes(new EncuestasPendientesManager.OnSincronizacionCompletaListener() {
+                        @Override
+                        public void onSincronizacionCompleta(boolean exito, String mensaje) {
+                            progressDialog.dismiss();
+
+                            Toast.makeText(EncuestasPosRegActivity.this, mensaje, Toast.LENGTH_LONG).show();
+
+                            // Volver a la pantalla principal
+                            Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
+                            startActivity(intent);
+                            finish();
+                        }
+                    });
+                }
+            });
+
+            builder.setNegativeButton("Más tarde", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    // Volver a la pantalla principal sin sincronizar
+                    Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
+                    startActivity(intent);
+                    finish();
+                }
+            });
+
+            builder.show();
+        } else {
+            // Mostrar alerta antes de salir sin guardar (comportamiento original)
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("¿Salir sin guardar?");
+            builder.setMessage("Si sale ahora, no se guardarán los datos de la encuesta.");
+            builder.setPositiveButton("Salir", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
+                    startActivity(intent);
+                    finish();
+                }
+            });
+            builder.setNegativeButton("Cancelar", null);
+            builder.show();
+        }
     }
 }
