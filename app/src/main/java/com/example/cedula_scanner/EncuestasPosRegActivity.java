@@ -32,6 +32,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.material.textfield.TextInputLayout;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -53,10 +54,12 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     private Toolbar toolbar;
     private EditText tvNombreCompleto, tvCedula;
     private EditText etNombreEmpresa, etNitEmpresa;
-    private RadioGroup rgTipoPersona, rgRepresentanteEmpresa;
-    private RadioButton rbPersonaNatural, rbPersonaJuridica, rbSiRepresentante, rbNoRepresentante;
+    private RadioGroup rgRepresentanteEmpresa;
+    private RadioButton rbSiRepresentante, rbNoRepresentante;
     private LinearLayout layoutPersonaJuridica, layoutDatosEmpresa, layoutIntereses;
-    private Spinner spinnerProyectoSena, spinnerInteres1, spinnerInteres2, spinnerInteres3;
+    private Spinner spinnerTipoPersona, spinnerProyectoSena, spinnerInteres1, spinnerInteres2, spinnerInteres3;
+    private TextInputLayout tilNombreAsociacion;
+    private EditText etNombreAsociacion;
 
     // Variables para la funcionalidad de empresas
     private EmpresaManager empresaManager;
@@ -107,12 +110,45 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         setUpToolbar();
 
         // Inicializar vistas
+        initializeViews();
+
+        // Inicializar EmpresaManager
+        empresaManager = new EmpresaManager(this);
+
+        // Configurar listeners de botones
+        setupButtonListeners();
+
+        // Obtener IDs de evento y subevento
+        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        idEvento = prefs.getString("idEvento", null);
+        idSubevento = prefs.getString("idSubevento", null);
+
+        // Obtener datos del intent
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            nombreCompleto = extras.getString("nombre_completo", "");
+            numeroCedula = extras.getString("numero_cedula", "");
+            tvNombreCompleto.setText(nombreCompleto);
+            tvCedula.setText(numeroCedula);
+        }
+
+        // Configurar listeners
+        setupSpinnerListeners();
+
+        // Llenar los spinners con datos
+        cargarDatosSpinners();
+
+        // Establecer estado inicial
+        setupInitialState();
+    }
+
+    private void initializeViews() {
         tvNombreCompleto = findViewById(R.id.tvNombreCompleto);
         tvCedula = findViewById(R.id.tvCedula);
 
-        rgTipoPersona = findViewById(R.id.rgTipoPersona);
-        rbPersonaNatural = findViewById(R.id.rbPersonaNatural);
-        rbPersonaJuridica = findViewById(R.id.rbPersonaJuridica);
+        spinnerTipoPersona = findViewById(R.id.spinnerTipoPersona);
+        tilNombreAsociacion = findViewById(R.id.tilNombreAsociacion);
+        etNombreAsociacion = findViewById(R.id.etNombreAsociacion);
 
         layoutPersonaJuridica = findViewById(R.id.layoutPersonaJuridica);
         layoutIntereses = findViewById(R.id.layoutIntereses);
@@ -135,94 +171,43 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         sectionProyectoSena = findViewById(R.id.sectionProyectoSena);
         sectionTipoPrograma = findViewById(R.id.sectionTipoPrograma);
 
-        // Nuevas vistas
         layoutFortalecimientoEmpresarial = findViewById(R.id.layoutFortalecimientoEmpresarial);
         etRequerimientoFortalecimiento = findViewById(R.id.etRequerimientoFortalecimiento);
 
-        // Inicializar EmpresaManager
-        empresaManager = new EmpresaManager(this);
-
-        // Inicializar botón de búsqueda de empresas
         btnBuscarEmpresa = findViewById(R.id.btnBuscarEmpresa);
-        btnBuscarEmpresa.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mostrarDialogoBusquedaEmpresa();
-            }
-        });
-
-        // Inicializar botón de crear empresa
         btnCrearNuevaEmpresa = findViewById(R.id.btnCrearNuevaEmpresa);
-        btnCrearNuevaEmpresa.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                crearYGuardarEmpresa();
-            }
-        });
+    }
 
-        // Obtener IDs de evento y subevento
-        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
-        idEvento = prefs.getString("idEvento", null);
-        idSubevento = prefs.getString("idSubevento", null);
+    private void setupButtonListeners() {
+        btnBuscarEmpresa.setOnClickListener(v -> mostrarDialogoBusquedaEmpresa());
+        btnCrearNuevaEmpresa.setOnClickListener(v -> crearYGuardarEmpresa());
+    }
 
-        // Obtener datos del intent
-        Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            nombreCompleto = extras.getString("nombre_completo", "");
-            numeroCedula = extras.getString("numero_cedula", "");
-            tvNombreCompleto.setText(nombreCompleto);
-            tvCedula.setText(numeroCedula);
-        }
+    private void setupSpinnerListeners() {
+        // Configurar spinner de tipo de persona
+        String[] tiposPersona = {"Persona Natural", "Persona Jurídica", "Pertenezco a una Asociación Campesina"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, tiposPersona);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerTipoPersona.setAdapter(adapter);
 
-        // Configurar los listeners para mostrar/ocultar secciones
-        rgTipoPersona.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                if (checkedId == R.id.rbPersonaJuridica) {
-                    // Para personas jurídicas:
-                    // - Mostrar sección de proyecto SENA
-                    sectionProyectoSena.setVisibility(View.VISIBLE);
-                    // - Mostrar selección de representante de empresa
-                    layoutPersonaJuridica.setVisibility(View.VISIBLE);
-                    // - Ocultar sección de intereses
-                    layoutIntereses.setVisibility(View.GONE);
-                    // - Ocultar sección de tipo de programa
-                    sectionTipoPrograma.setVisibility(View.GONE);
-                } else {
-                    // Para personas naturales:
-                    // - Ocultar sección de proyecto SENA
-                    sectionProyectoSena.setVisibility(View.GONE);
-                    // - Ocultar selección de representante de empresa
-                    layoutPersonaJuridica.setVisibility(View.GONE);
-                    // - Mostrar sección de intereses
-                    layoutIntereses.setVisibility(View.VISIBLE);
-                    // - La sección de tipo de programa dependerá del interés seleccionado
-                    actualizarVisibilidadTipoPrograma();
-                }
-            }
-        });
-
-        rgRepresentanteEmpresa.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                if (checkedId == R.id.rbSiRepresentante) {
-                    layoutDatosEmpresa.setVisibility(View.VISIBLE);
-                } else {
-                    layoutDatosEmpresa.setVisibility(View.GONE);
-                }
-            }
-        });
-
-        // Configurar listener para el spinner de interés 1
-        spinnerInteres1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        spinnerTipoPersona.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                actualizarVisibilidadTipoPrograma();
+                String tipoSeleccionado = parent.getItemAtPosition(position).toString();
+                actualizarVisibilidadSegunTipoPersona(tipoSeleccionado);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
                 // No hacer nada
+            }
+        });
+
+        rgRepresentanteEmpresa.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rbSiRepresentante) {
+                layoutDatosEmpresa.setVisibility(View.VISIBLE);
+            } else {
+                layoutDatosEmpresa.setVisibility(View.GONE);
             }
         });
 
@@ -243,29 +228,53 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                 layoutFortalecimientoEmpresarial.setVisibility(View.GONE);
             }
         });
+    }
 
-        // Llenar los spinners con datos
-        cargarDatosSpinners();
+    private void actualizarVisibilidadSegunTipoPersona(String tipoSeleccionado) {
+        switch (tipoSeleccionado) {
+            case "Persona Natural":
+                // Persona Natural: mostrar intereses, ocultar resto
+                layoutIntereses.setVisibility(View.VISIBLE);
+                layoutPersonaJuridica.setVisibility(View.GONE);
+                sectionProyectoSena.setVisibility(View.GONE);
+                tilNombreAsociacion.setVisibility(View.GONE);
+                actualizarVisibilidadTipoPrograma();
+                break;
 
-        // Establecer estado inicial basado en el tipo de persona seleccionado
-        if (rbPersonaJuridica.isChecked()) {
-            sectionProyectoSena.setVisibility(View.VISIBLE);
-            layoutPersonaJuridica.setVisibility(View.VISIBLE);
-            layoutIntereses.setVisibility(View.GONE);
-            sectionTipoPrograma.setVisibility(View.GONE);
-        } else {
-            sectionProyectoSena.setVisibility(View.GONE);
-            layoutPersonaJuridica.setVisibility(View.GONE);
-            layoutIntereses.setVisibility(View.VISIBLE);
-            actualizarVisibilidadTipoPrograma();
+            case "Persona Jurídica":
+                // Persona Jurídica: mostrar proyectos SENA y representante empresa
+                layoutIntereses.setVisibility(View.GONE);
+                layoutPersonaJuridica.setVisibility(View.VISIBLE);
+                sectionProyectoSena.setVisibility(View.VISIBLE);
+                tilNombreAsociacion.setVisibility(View.GONE);
+                sectionTipoPrograma.setVisibility(View.GONE);
+                break;
+
+            case "Pertenezco a una Asociación Campesina":
+                // Asociación Campesina: mostrar intereses y campo asociación
+                layoutIntereses.setVisibility(View.VISIBLE);
+                layoutPersonaJuridica.setVisibility(View.GONE);
+                sectionProyectoSena.setVisibility(View.GONE);
+                tilNombreAsociacion.setVisibility(View.VISIBLE);
+                actualizarVisibilidadTipoPrograma();
+                break;
         }
     }
 
-    // Método para actualizar la visibilidad de la sección de tipo de programa
-    // basado en si "Estudiar" está seleccionado como interés principal
+    private void setupInitialState() {
+        // Establecer "Persona Natural" como selección inicial
+        spinnerTipoPersona.setSelection(0);
+        actualizarVisibilidadSegunTipoPersona("Persona Natural");
+    }
+
     private void actualizarVisibilidadTipoPrograma() {
-        if (rbPersonaNatural.isChecked() && spinnerInteres1.getSelectedItemPosition() > 0) {
+        String tipoSeleccionado = spinnerTipoPersona.getSelectedItem().toString();
+
+        if ((tipoSeleccionado.equals("Persona Natural") || tipoSeleccionado.equals("Pertenezco a una Asociación Campesina"))
+                && spinnerInteres1.getSelectedItemPosition() > 0) {
+
             String interesSeleccionado = spinnerInteres1.getSelectedItem().toString();
+
             if ("Estudiar".equals(interesSeleccionado)) {
                 sectionTipoPrograma.setVisibility(View.VISIBLE);
             } else {
@@ -275,36 +284,15 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             sectionTipoPrograma.setVisibility(View.GONE);
         }
     }
-    // Método para normalizar la visualización de texto con caracteres especiales
-    private String mostrarTexto(String texto) {
-        if (texto == null) return "";
 
-        // Si no hay caracteres especiales latinoamericanos visibles, intentamos arreglar
-        if (!texto.matches(".*[áéíóúÁÉÍÓÚñÑüÜ].*")) {
-            try {
-                // Intenta interpretar como Latin-1 (ISO-8859-1)
-                return new String(texto.getBytes("ISO-8859-1"), "UTF-8");
-            } catch (Exception e) {
-                return texto;
-            }
-        }
-
-        return texto;
-    }
-
-    // Método para mostrar el diálogo de búsqueda de empresas
     private void mostrarDialogoBusquedaEmpresa() {
         SelectorEmpresaDialog dialog = new SelectorEmpresaDialog(this, empresaManager,
                 new SelectorEmpresaDialog.OnEmpresaSelectedListener() {
                     @Override
                     public void onEmpresaSelected(EmpresaManager.Empresa empresa) {
-                        // Guardar la empresa seleccionada
                         empresaSeleccionada = empresa;
-
-                        // Actualizar los campos con la información de la empresa
                         etNombreEmpresa.setText(empresa.getNombreCorregido());
                         etNitEmpresa.setText(empresa.nit);
-
                         Toast.makeText(EncuestasPosRegActivity.this,
                                 "Empresa seleccionada: " + empresa.getNombreCorregido(),
                                 Toast.LENGTH_SHORT).show();
@@ -312,13 +300,9 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
                     @Override
                     public void onNuevaEmpresa(String nombreEmpresa) {
-                        // Limpiar los campos y establecer solo el nombre para una nueva empresa
                         etNombreEmpresa.setText(nombreEmpresa);
                         etNitEmpresa.setText("");
-
-                        // Limpiar referencia a empresa seleccionada
                         empresaSeleccionada = null;
-
                         Toast.makeText(EncuestasPosRegActivity.this,
                                 "Nueva empresa: " + nombreEmpresa,
                                 Toast.LENGTH_SHORT).show();
@@ -343,50 +327,16 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             return;
         }
 
-        // Crear una nueva empresa usando el empresaManager
         empresaSeleccionada = empresaManager.crearNuevaEmpresa(
-                nombreEmpresa,  // Nombre
-                nitEmpresa,     // NIT
-                "",             // Teléfono (vacío)
-                "",             // Correo (vacío)
-                ""              // Dirección (vacía)
-        );
+                nombreEmpresa, nitEmpresa, "", "", "");
 
         Toast.makeText(this, "Empresa '" + nombreEmpresa + "' guardada localmente", Toast.LENGTH_SHORT).show();
     }
 
-    // Clase interna para representar un curso
-    private static class Curso {
-        int id;
-        String nombre;
-        String tipo;
-
-        Curso(int id, String nombre, String tipo) {
-            this.id = id;
-            this.nombre = nombre;
-            this.tipo = tipo;
-        }
-
-        // Método para obtener el nombre corregido
-        public String getNombreCorregido() {
-            try {
-                // Intentar corregir la codificación
-                return new String(nombre.getBytes("ISO-8859-1"), "UTF-8");
-            } catch (Exception e) {
-                return nombre; // Si falla, devolver el nombre original
-            }
-        }
-    }
-
-
-
-
-    // Este método reemplaza tu método actual cargarDatosSpinners()
     private void cargarDatosSpinners() {
-        // 1. Cargar datos originales como lo tenías
         cargarListasOriginales();
 
-        // 2. Crear listas filtradas para cada spinner (inicialmente iguales a la original)
+        // Crear listas filtradas para cada spinner
         listaInteresesFiltrada1 = new ArrayList<>(listaIntereses);
         listaInteresesFiltrada2 = new ArrayList<>(listaIntereses);
         listaInteresesFiltrada3 = new ArrayList<>(listaIntereses);
@@ -395,29 +345,71 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         listaInteresesIdsFiltrada2 = new ArrayList<>(listaInteresesIds);
         listaInteresesIdsFiltrada3 = new ArrayList<>(listaInteresesIds);
 
-        // 3. Crear adaptadores independientes para cada spinner
-        adapterInteres1 = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, listaInteresesFiltrada1);
+        // Crear adaptadores independientes para cada spinner
+        adapterInteres1 = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, listaInteresesFiltrada1);
         adapterInteres1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        adapterInteres2 = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, listaInteresesFiltrada2);
+        adapterInteres2 = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, listaInteresesFiltrada2);
         adapterInteres2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        adapterInteres3 = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, listaInteresesFiltrada3);
+        adapterInteres3 = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, listaInteresesFiltrada3);
         adapterInteres3.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        // 4. Configurar los adaptadores a los spinners
         spinnerInteres1.setAdapter(adapterInteres1);
         spinnerInteres2.setAdapter(adapterInteres2);
         spinnerInteres3.setAdapter(adapterInteres3);
 
-        // 5. Configurar listeners para los spinners
         configurarListenersSpinners();
 
-        // 6. El resto del código de carga (proyectos SENA, tipos de programas) permanece igual
-        // Cargar lista de proyectos SENA (con nuevas opciones)
+        // Cargar proyectos SENA
+        cargarProyectosSena();
+
+        // Cargar tipos de programas
+        cargarTiposProgramas();
+    }
+
+    private void cargarListasOriginales() {
+        listaInteresesIds.clear();
+        listaIntereses.clear();
+
+        listaInteresesIds.add(-1);
+        listaIntereses.add("Seleccione una opción...");
+
+        listaInteresesIds.add(1);
+        listaIntereses.add("Encontrar un empleo");
+
+        listaInteresesIds.add(2);
+        listaIntereses.add("Emprender");
+
+        listaInteresesIds.add(3);
+        listaIntereses.add("Fortalecer mi negocio");
+
+        listaInteresesIds.add(4);
+        listaIntereses.add("Deseo comprar");
+
+        listaInteresesIds.add(5);
+        listaIntereses.add("Deseo vender");
+
+        listaInteresesIds.add(6);
+        listaIntereses.add("Encontrar una práctica laboral");
+
+        listaInteresesIds.add(7);
+        listaIntereses.add("Estudiar");
+
+        listaInteresesIds.add(8);
+        listaIntereses.add("Certificar mi conocimiento empírico");
+
+        listaInteresesIds.add(9);
+        listaIntereses.add("Graduarme del SENA");
+
+        listaInteresesIds.add(10);
+        listaIntereses.add("Cambiar de oficio");
+    }
+
+    private void cargarProyectosSena() {
+        listaProyectosSenaIds.clear();
+        listaProyectosSena.clear();
+
         listaProyectosSenaIds.add(-1);
         listaProyectosSena.add("Seleccione un proyecto...");
 
@@ -433,90 +425,39 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         listaProyectosSenaIds.add(4);
         listaProyectosSena.add("Red Tecnoparque");
 
-        // Nuevas opciones
         listaProyectosSenaIds.add(5);
         listaProyectosSena.add("Fortalecimiento Empresarial");
 
         listaProyectosSenaIds.add(6);
         listaProyectosSena.add("Red de Aliados");
 
-        // Crear adaptador para el spinner de proyectos SENA
         ArrayAdapter<String> adapterProyectos = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, listaProyectosSena);
         adapterProyectos.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
         spinnerProyectoSena.setAdapter(adapterProyectos);
+    }
 
-        // Cargar tipos de programas
+    private void cargarTiposProgramas() {
         listaTiposProgramas.clear();
         listaTiposProgramas.add("Seleccione un tipo de programa...");
         listaTiposProgramas.add("Técnico");
         listaTiposProgramas.add("Tecnólogo");
         listaTiposProgramas.add("Curso Corto");
 
-        // Crear adaptador para el spinner de tipos de programa
         ArrayAdapter<String> adapterTipos = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, listaTiposProgramas);
         adapterTipos.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
         spinnerTipoPrograma.setAdapter(adapterTipos);
     }
 
-    // Este es un nuevo método que debes añadir
-    private void cargarListasOriginales() {
-        // Limpiar listas primero para evitar duplicados si se llama múltiples veces
-        listaInteresesIds.clear();
-        listaIntereses.clear();
-
-        // Cargar lista de intereses de la Red de Oportunidades
-        listaInteresesIds.add(-1);
-        listaIntereses.add("Seleccione una opción...");
-
-        // Añadir intereses según la tabla que mostraste
-        listaInteresesIds.add(1);
-        listaIntereses.add("Encontrar un empleo");
-
-        listaInteresesIds.add(2);
-        listaIntereses.add("Emprender");
-
-        listaInteresesIds.add(3);
-        listaIntereses.add("Fortalecer mi negocio");
-
-        listaInteresesIds.add(4);
-        listaIntereses.add("Encontrar una práctica laboral");
-
-        listaInteresesIds.add(5);
-        listaIntereses.add("Estudiar");
-
-        listaInteresesIds.add(6);
-        listaIntereses.add("Certificar mi conocimiento empírico");
-
-        listaInteresesIds.add(7);
-        listaIntereses.add("Graduarme del SENA");
-
-        listaInteresesIds.add(8);
-        listaIntereses.add("Cambiar de oficio");
-    }
-
-
     private void configurarListenersSpinners() {
-        // Configurar el listener para el primer spinner
         spinnerInteres1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // Guardar la selección actual
                 seleccionInteres1 = listaInteresesFiltrada1.get(position);
                 seleccionInteresId1 = listaInteresesIdsFiltrada1.get(position);
-
-                // Actualizar los otros spinners
                 actualizarSpinnersIntereses();
-
-                // Mostrar sección de tipo de programa si selecciona "Estudiar"
-                if (seleccionInteres1.equals("Estudiar")) {
-                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.VISIBLE);
-                } else if (!seleccionInteres2.equals("Estudiar") && !seleccionInteres3.equals("Estudiar")) {
-                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.GONE);
-                }
+                actualizarVisibilidadTipoPrograma();
             }
 
             @Override
@@ -526,23 +467,12 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             }
         });
 
-        // Configurar el listener para el segundo spinner
         spinnerInteres2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // Guardar la selección actual
                 seleccionInteres2 = listaInteresesFiltrada2.get(position);
                 seleccionInteresId2 = listaInteresesIdsFiltrada2.get(position);
-
-                // Actualizar los otros spinners
                 actualizarSpinnersIntereses();
-
-                // Mostrar sección de tipo de programa si selecciona "Estudiar"
-                if (seleccionInteres2.equals("Estudiar")) {
-                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.VISIBLE);
-                } else if (!seleccionInteres1.equals("Estudiar") && !seleccionInteres3.equals("Estudiar")) {
-                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.GONE);
-                }
             }
 
             @Override
@@ -552,20 +482,11 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             }
         });
 
-        // Configurar el listener para el tercer spinner
         spinnerInteres3.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // Guardar la selección actual
                 seleccionInteres3 = listaInteresesFiltrada3.get(position);
                 seleccionInteresId3 = listaInteresesIdsFiltrada3.get(position);
-
-                // Mostrar sección de tipo de programa si selecciona "Estudiar"
-                if (seleccionInteres3.equals("Estudiar")) {
-                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.VISIBLE);
-                } else if (!seleccionInteres1.equals("Estudiar") && !seleccionInteres2.equals("Estudiar")) {
-                    findViewById(R.id.sectionTipoPrograma).setVisibility(View.GONE);
-                }
             }
 
             @Override
@@ -576,25 +497,20 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         });
     }
 
-
     private void actualizarSpinnersIntereses() {
-        // Guardar las selecciones actuales antes de actualizar los adaptadores
         int posicionSpinner2 = spinnerInteres2.getSelectedItemPosition();
         int posicionSpinner3 = spinnerInteres3.getSelectedItemPosition();
 
-        // 1. Reiniciar las listas filtradas para spinner 2 y 3
         listaInteresesFiltrada2.clear();
         listaInteresesIdsFiltrada2.clear();
         listaInteresesFiltrada3.clear();
         listaInteresesIdsFiltrada3.clear();
 
-        // 2. Repoblar las listas filtradas excluyendo las selecciones actuales
         // Para spinner 2, excluir la selección del spinner 1
         for (int i = 0; i < listaIntereses.size(); i++) {
             String interes = listaIntereses.get(i);
             int interesId = listaInteresesIds.get(i);
 
-            // Si es la primera opción (Seleccione...) o si no es la opción seleccionada en spinner 1
             if (interesId == -1 || !interes.equals(seleccionInteres1) || seleccionInteresId1 == -1) {
                 listaInteresesFiltrada2.add(interes);
                 listaInteresesIdsFiltrada2.add(interesId);
@@ -606,7 +522,6 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             String interes = listaIntereses.get(i);
             int interesId = listaInteresesIds.get(i);
 
-            // Si es la primera opción o si no es la opción seleccionada en spinner 1 ni spinner 2
             if (interesId == -1 ||
                     ((!interes.equals(seleccionInteres1) || seleccionInteresId1 == -1) &&
                             (!interes.equals(seleccionInteres2) || seleccionInteresId2 == -1))) {
@@ -615,62 +530,25 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
             }
         }
 
-        // 3. Notificar a los adaptadores que los datos han cambiado
         adapterInteres2.notifyDataSetChanged();
         adapterInteres3.notifyDataSetChanged();
 
-        // 4. Intentar mantener las mismas selecciones si aún están disponibles
         try {
             if (posicionSpinner2 >= 0 && posicionSpinner2 < listaInteresesFiltrada2.size()) {
                 spinnerInteres2.setSelection(posicionSpinner2);
             } else {
-                spinnerInteres2.setSelection(0); // Seleccionar primera opción
+                spinnerInteres2.setSelection(0);
             }
 
             if (posicionSpinner3 >= 0 && posicionSpinner3 < listaInteresesFiltrada3.size()) {
                 spinnerInteres3.setSelection(posicionSpinner3);
             } else {
-                spinnerInteres3.setSelection(0); // Seleccionar primera opción
+                spinnerInteres3.setSelection(0);
             }
         } catch (Exception e) {
             Log.e("EncuestasPosReg", "Error al actualizar selección de spinners: " + e.getMessage());
         }
     }
-
-    // Método para actualizar el spinner de tipos de programas
-    private void actualizarTiposProgramas() {
-        // Obtener tipos únicos de todos los cursos
-        Set<String> tiposUnicos = new HashSet<>();
-
-
-        // Convertir a lista y ordenar
-        List<String> tiposOriginales = new ArrayList<>(tiposUnicos);
-        Collections.sort(tiposOriginales);
-
-        // Corregir la codificación de los tipos
-        listaTiposProgramas.clear();
-        for (String tipo : tiposOriginales) {
-            try {
-                // Corregir la codificación
-                String tipoCorregido = new String(tipo.getBytes("ISO-8859-1"), "UTF-8");
-                listaTiposProgramas.add(tipoCorregido);
-            } catch (Exception e) {
-                // Si falla, usar el tipo original
-                listaTiposProgramas.add(tipo);
-            }
-        }
-
-        // Crear adaptador para el spinner de tipos
-        ArrayAdapter<String> adapterTipos = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, listaTiposProgramas);
-        adapterTipos.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-        spinnerTipoPrograma.setAdapter(adapterTipos);
-
-    }
-
-    // Método para cargar ejemplos de cursos en caso de error
-
 
     public void setUpToolbar() {
         toolbar = findViewById(R.id.my_toolbar);
@@ -691,12 +569,10 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.itemCerrarSesion:
-                // Cerrar sesión
                 SharedPreferences.Editor editor = getSharedPreferences("MyPrefs", MODE_PRIVATE).edit();
                 editor.clear();
                 editor.apply();
 
-                // Redirigir al login
                 Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
@@ -705,7 +581,6 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
                 Toast.makeText(this, "Sesión cerrada", Toast.LENGTH_SHORT).show();
                 return true;
             case R.id.item3:
-                // Código para la opción "Acerca de"
                 Intent about = new Intent(this, about.class);
                 startActivity(about);
                 return true;
@@ -715,84 +590,15 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
     }
 
     public void guardarEncuesta(View view) {
-        boolean esPersonaJuridica = rbPersonaJuridica.isChecked();
+        String tipoPersonaSeleccionada = spinnerTipoPersona.getSelectedItem().toString();
 
-        // Validar que se haya seleccionado un proyecto SENA (solo para persona jurídica)
-        if (esPersonaJuridica) {
-            int posProyecto = spinnerProyectoSena.getSelectedItemPosition();
-            if (posProyecto == 0) {
-                Toast.makeText(this, "Por favor seleccione un proyecto SENA", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        final boolean esPersonaJuridica = tipoPersonaSeleccionada.equals("Persona Jurídica");
+        final boolean esAsociacionCampesina = tipoPersonaSeleccionada.equals("Pertenezco a una Asociación Campesina");
+        final String tipoPersona = esPersonaJuridica ? "Juridica" : (esAsociacionCampesina ? "Asociacion" : "Natural");
 
-            // Validar el campo de requerimiento si seleccionó Fortalecimiento Empresarial
-            String proyectoSeleccionado = spinnerProyectoSena.getSelectedItem().toString();
-            if ("Fortalecimiento Empresarial".equals(proyectoSeleccionado)) {
-                String requerimiento = etRequerimientoFortalecimiento.getText().toString().trim();
-                if (requerimiento.isEmpty()) {
-                    etRequerimientoFortalecimiento.setError("Por favor indique qué requiere del SENA");
-                    etRequerimientoFortalecimiento.requestFocus();
-                    return;
-                }
-            }
-        }
-
-        // Validar que se hayan seleccionado intereses para personas naturales
-        if (!esPersonaJuridica) {
-            int posInteres1 = spinnerInteres1.getSelectedItemPosition();
-            int posInteres2 = spinnerInteres2.getSelectedItemPosition();
-            int posInteres3 = spinnerInteres3.getSelectedItemPosition();
-
-            if (posInteres1 == 0) {
-                Toast.makeText(this, "Por favor seleccione su interés principal", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (posInteres2 == 0) {
-                Toast.makeText(this, "Por favor seleccione su segundo interés", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (posInteres3 == 0) {
-                Toast.makeText(this, "Por favor seleccione su tercer interés", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Validar que no se repitan los intereses
-            String interes1 = spinnerInteres1.getSelectedItem().toString();
-            String interes2 = spinnerInteres2.getSelectedItem().toString();
-            String interes3 = spinnerInteres3.getSelectedItem().toString();
-
-            // Verificamos si alguno es "Seleccione una opción..." o si están repetidos
-            if (interes1.equals("Seleccione una opción...") ||
-                    interes2.equals("Seleccione una opción...") ||
-                    interes3.equals("Seleccione una opción...")) {
-                Toast.makeText(this, "Por favor, seleccione todos sus intereses", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Validar el tipo de programa si el interés principal es "Estudiar"
-            String interesSeleccionado = spinnerInteres1.getSelectedItem().toString();
-            if ("Estudiar".equals(interesSeleccionado)) {
-                int posTipoPrograma = spinnerTipoPrograma.getSelectedItemPosition();
-                if (posTipoPrograma == 0) {
-                    Toast.makeText(this, "Por favor seleccione un tipo de programa", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            }
-        }
-
-        // Si es representante de empresa, validar datos de empresa (solo para personas jurídicas)
-        if (esPersonaJuridica) {
-            boolean esRepresentanteEmpresa = rbSiRepresentante.isChecked();
-            if (esRepresentanteEmpresa) {
-                String nombreEmpresa = etNombreEmpresa.getText().toString().trim();
-                if (nombreEmpresa.isEmpty()) {
-                    etNombreEmpresa.setError("Ingrese el nombre de la empresa");
-                    etNombreEmpresa.requestFocus();
-                    return;
-                }
-            }
+        // Validaciones según el tipo de persona
+        if (!validarFormulario(esPersonaJuridica, esAsociacionCampesina)) {
+            return;
         }
 
         // Mostrar diálogo de progreso
@@ -800,277 +606,339 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
         progressDialog.setMessage("Guardando encuesta...");
         progressDialog.show();
 
-        // Preparar datos para enviar al servidor
-        final String tipoPersona = rbPersonaJuridica.isChecked() ? "Juridica" : "Natural";
-        final String esRepresentante = (esPersonaJuridica && rbSiRepresentante.isChecked()) ? "Si" : "No";
-
+        // Preparar datos
+        final boolean esRepresentante = (esPersonaJuridica && rbSiRepresentante.isChecked());
         final String nombreEmpresa = etNombreEmpresa.getText().toString().trim();
         final String nitEmpresa = etNitEmpresa.getText().toString().trim();
+        final String idEmpresa = (empresaSeleccionada != null) ? String.valueOf(empresaSeleccionada.id) : "-1";
 
-        // Si tenemos una empresa seleccionada, usamos su ID
-        final String idEmpresa = (empresaSeleccionada != null) ?
-                String.valueOf(empresaSeleccionada.id) : "-1";
-
-        // Solo obtener proyecto SENA si es persona jurídica, sino usar valor por defecto
         final int proyectoSenaId = esPersonaJuridica ?
                 listaProyectosSenaIds.get(spinnerProyectoSena.getSelectedItemPosition()) : -1;
 
-        // Obtener requerimiento para Fortalecimiento Empresarial
         final String requerimientoFortalecimiento = (esPersonaJuridica &&
                 "Fortalecimiento Empresarial".equals(spinnerProyectoSena.getSelectedItem().toString())) ?
                 etRequerimientoFortalecimiento.getText().toString().trim() : "";
 
-        // Para intereses, solo si es persona natural
-        final int interes1Id = !esPersonaJuridica ? listaInteresesIds.get(spinnerInteres1.getSelectedItemPosition()) : -1;
-        final int interes2Id = !esPersonaJuridica ? listaInteresesIds.get(spinnerInteres2.getSelectedItemPosition()) : -1;
-        final int interes3Id = !esPersonaJuridica ? listaInteresesIds.get(spinnerInteres3.getSelectedItemPosition()) : -1;
+        final int interes1Id = !esPersonaJuridica ? seleccionInteresId1 : -1;
+        final int interes2Id = !esPersonaJuridica ? seleccionInteresId2 : -1;
+        final int interes3Id = !esPersonaJuridica ? seleccionInteresId3 : -1;
 
-        // Obtener tipo de programa si corresponde
-        final String tipoPrograma = (!esPersonaJuridica && "Estudiar".equals(spinnerInteres1.getSelectedItem().toString())) ?
+        final String tipoPrograma = (!esPersonaJuridica && "Estudiar".equals(seleccionInteres1)) ?
                 spinnerTipoPrograma.getSelectedItem().toString() : "";
 
+        final String nombreAsociacion = esAsociacionCampesina ?
+                etNombreAsociacion.getText().toString().trim() : "";
+
         // Enviar datos al servidor
+        enviarEncuestaAlServidor(progressDialog, tipoPersona, esRepresentante, nombreEmpresa, nitEmpresa,
+                idEmpresa, proyectoSenaId, requerimientoFortalecimiento, interes1Id, interes2Id, interes3Id,
+                tipoPrograma, nombreAsociacion);
+    }
+
+    private boolean validarFormulario(boolean esPersonaJuridica, boolean esAsociacionCampesina) {
+        // Validaciones para persona jurídica
+        if (esPersonaJuridica) {
+            int posProyecto = spinnerProyectoSena.getSelectedItemPosition();
+            if (posProyecto == 0) {
+                Toast.makeText(this, "Por favor seleccione un proyecto SENA", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            // Validar requerimiento para Fortalecimiento Empresarial
+            String proyectoSeleccionado = spinnerProyectoSena.getSelectedItem().toString();
+            if ("Fortalecimiento Empresarial".equals(proyectoSeleccionado)) {
+                String requerimiento = etRequerimientoFortalecimiento.getText().toString().trim();
+                if (requerimiento.isEmpty()) {
+                    etRequerimientoFortalecimiento.setError("Por favor indique qué requiere del SENA");
+                    etRequerimientoFortalecimiento.requestFocus();
+                    return false;
+                }
+            }
+
+            // Validar datos de empresa si es representante
+            if (rbSiRepresentante.isChecked()) {
+                String nombreEmpresa = etNombreEmpresa.getText().toString().trim();
+                if (nombreEmpresa.isEmpty()) {
+                    etNombreEmpresa.setError("Ingrese el nombre de la empresa");
+                    etNombreEmpresa.requestFocus();
+                    return false;
+                }
+            }
+        }
+
+        // Validaciones para persona natural y asociación campesina
+        if (!esPersonaJuridica) {
+            // Validar intereses
+            if (seleccionInteresId1 == -1 || seleccionInteresId2 == -1 || seleccionInteresId3 == -1) {
+                Toast.makeText(this, "Por favor seleccione todos sus intereses", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            // Validar tipo de programa si seleccionó "Estudiar"
+            if ("Estudiar".equals(seleccionInteres1)) {
+                int posTipoPrograma = spinnerTipoPrograma.getSelectedItemPosition();
+                if (posTipoPrograma == 0) {
+                    Toast.makeText(this, "Por favor seleccione un tipo de programa", Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+            }
+
+            // Validar nombre de asociación
+            if (esAsociacionCampesina) {
+                String nombreAsociacion = etNombreAsociacion.getText().toString().trim();
+                if (nombreAsociacion.isEmpty()) {
+                    etNombreAsociacion.setError("Ingrese el nombre de la asociación");
+                    etNombreAsociacion.requestFocus();
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private void enviarEncuestaAlServidor(ProgressDialog progressDialog, String tipoPersona, boolean esRepresentante,
+                                          String nombreEmpresa, String nitEmpresa, String idEmpresa, int proyectoSenaId,
+                                          String requerimientoFortalecimiento, int interes1Id, int interes2Id,
+                                          int interes3Id, String tipoPrograma, String nombreAsociacion) {
+
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
         String url = "https://tecnoparqueatlantico.com/red_oportunidades/AsistenciaApi/insertarEncuesta.php";
-        //String url = "http://192.168.0.14/AsistenciaApi/insertarEncuesta.php";
+        //String url = "http://192.168.5.106/AsistenciaApi/insertarEncuesta.php"; // URL de desarrollo
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        progressDialog.dismiss();
+                response -> {
+                    progressDialog.dismiss();
+                    try {
+                        JSONObject jsonResponse = new JSONObject(response);
+                        boolean success = jsonResponse.getBoolean("success");
+                        String message = jsonResponse.getString("message");
 
-                        // Imprimir la respuesta completa para depuración
-                        //Log.d(TAG, "Respuesta del servidor: " + response);
+                        mostrarResultadoGuardado(success, message);
 
-                        // Mostrar la respuesta sin procesar en un Toast para depuración
-//                        Toast.makeText(EncuestasPosRegActivity.this,
-//                                "Respuesta: " + response,
-//                                Toast.LENGTH_LONG).show();
-
-                        try {
-                            JSONObject jsonResponse = new JSONObject(response);
-                            boolean success = jsonResponse.getBoolean("success");
-                            String message = jsonResponse.getString("message");
-
-                            // Mostrar alerta con el mensaje del servidor
-                            AlertDialog.Builder builder = new AlertDialog.Builder(EncuestasPosRegActivity.this);
-                            builder.setTitle(success ? "Éxito" : "Error");
-                            builder.setMessage(message);
-                            builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    if (success) {
-                                        // Solo sincronizar empresas si la encuesta se guardó con éxito
-                                        empresaManager.sincronizarNuevasEmpresas(new EmpresaManager.OnSincronizacionCompletaListener() {
-                                            @Override
-                                            public void onSincronizacionCompleta(boolean exitoso, String mensaje) {
-                                                Log.d(TAG, "Sincronización de empresas: " + mensaje);
-                                                // Opcional: mostrar un toast si hay errores
-                                                if (!exitoso) {
-                                                    Toast.makeText(EncuestasPosRegActivity.this,
-                                                            "Algunas empresas no se sincronizaron: " + mensaje,
-                                                            Toast.LENGTH_SHORT).show();
-                                                }
-
-                                                // Volver a la pantalla principal después de sincronizar
-                                                Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
-                                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                                startActivity(intent);
-                                                finish();
-                                            }
-                                        });
-                                    } else {
-                                        // Si no se guardó correctamente, solo volver a la pantalla principal sin sincronizar
-                                        Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
-                                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                        startActivity(intent);
-                                        finish();
-                                    }
-                                }
-                            });
-                            builder.show();
-
-                        } catch (JSONException e) {
-                            Toast.makeText(EncuestasPosRegActivity.this, "Error al procesar la respuesta: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                            Log.e(TAG, "Error al procesar respuesta JSON: " + e.getMessage());
-                        }
+                    } catch (JSONException e) {
+                        Toast.makeText(EncuestasPosRegActivity.this,
+                                "Error al procesar respuesta: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "Error al procesar respuesta JSON: " + e.getMessage());
                     }
                 },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        progressDialog.dismiss();
+                error -> {
+                    progressDialog.dismiss();
+                    Log.e(TAG, "Error en la solicitud: " + error.toString());
 
-                        Log.e(TAG, "Error en la solicitud: " + error.toString());
+                    // Guardar localmente si hay error de conexión
+                    guardarEncuestaLocalmente(tipoPersona, esRepresentante ? "Si" : "No", nombreEmpresa, nitEmpresa,
+                            proyectoSenaId, interes1Id, interes2Id, interes3Id, tipoPrograma,
+                            requerimientoFortalecimiento, idEmpresa, nombreAsociacion);
 
-                        // Mostrar el mensaje de error
-                        AlertDialog.Builder builder = new AlertDialog.Builder(EncuestasPosRegActivity.this);
-                        builder.setTitle("Error de conexión");
-                        builder.setMessage("No se pudo conectar con el servidor. Los datos se guardarán localmente y se enviarán cuando haya conexión.");
-
-                        // Guardar los datos localmente para enviarlos después
-                        guardarEncuestaLocalmente(tipoPersona, esRepresentante, nombreEmpresa, nitEmpresa,
-                                proyectoSenaId, interes1Id, interes2Id, interes3Id, tipoPrograma, requerimientoFortalecimiento, idEmpresa);
-
-                        builder.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                // Volver a la pantalla principal
-                                Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                startActivity(intent);
-                                finish();
-                            }
-                        });
-                        builder.show();
-                    }
+                    mostrarErrorConexion();
                 }
         ) {
             @Override
             protected Map<String, String> getParams() throws AuthFailureError {
-                Map<String, String> params = new HashMap<>();
-                params.put("cedula", numeroCedula);
-                params.put("idEvento", idEvento);
-                params.put("idSubevento", idSubevento);
-                params.put("tipo_persona", tipoPersona);
-
-                // Solo enviar proyecto SENA si es persona jurídica
-                if (tipoPersona.equals("Juridica")) {
-                    params.put("proyecto_sena", String.valueOf(proyectoSenaId));
-
-                    // Si eligió Fortalecimiento Empresarial, enviar el requerimiento
-                    if ("Fortalecimiento Empresarial".equals(spinnerProyectoSena.getSelectedItem().toString())) {
-                        params.put("requerimiento_fortalecimiento", requerimientoFortalecimiento);
-                    } else {
-                        params.put("requerimiento_fortalecimiento", "");
-                    }
-                } else {
-                    params.put("proyecto_sena", "-1"); // Valor por defecto para persona natural
-                    params.put("requerimiento_fortalecimiento", "");
-                }
-
-                // Separar nombres y apellidos del nombre completo
-                if (nombreCompleto != null && !nombreCompleto.isEmpty()) {
-                    // Obtener el primer nombre
-                    int primerEspacio = nombreCompleto.indexOf(' ');
-                    if (primerEspacio > 0) {
-                        // Si hay espacio, divide en primer nombre y el resto
-                        String primerNombre = nombreCompleto.substring(0, primerEspacio);
-                        String restoNombre = nombreCompleto.substring(primerEspacio + 1);
-                        params.put("nombres", primerNombre);
-                        params.put("apellidos", restoNombre);
-                    } else {
-                        // Si no hay espacio, todo es nombre
-                        params.put("nombres", nombreCompleto);
-                        params.put("apellidos", "");
-                    }
-                } else {
-                    params.put("nombres", "");
-                    params.put("apellidos", "");
-                }
-
-                // Intereses (si es persona natural)
-                if (!tipoPersona.equals("Juridica")) {
-                    params.put("interes1", String.valueOf(interes1Id));
-                    params.put("interes2", String.valueOf(interes2Id));
-                    params.put("interes3", String.valueOf(interes3Id));
-
-                    // Agregar tipo de programa si el interés principal es "Estudiar"
-                    if ("Estudiar".equals(spinnerInteres1.getSelectedItem().toString())) {
-                        params.put("tipo_programa", tipoPrograma);
-                    } else {
-                        params.put("tipo_programa", "");
-                    }
-                } else {
-                    params.put("interes1", "-1");
-                    params.put("interes2", "-1");
-                    params.put("interes3", "-1");
-                    params.put("tipo_programa", "");
-                }
-
-                // Si es representante de empresa (solo para persona jurídica)
-                if (tipoPersona.equals("Juridica") && esRepresentante.equals("Si")) {
-                    params.put("es_representante", "Si");
-                    params.put("nombre_empresa", nombreEmpresa);
-                    params.put("nit_empresa", nitEmpresa);
-
-                    // Añadir el ID de la empresa (si existe)
-                    params.put("id_empresa", idEmpresa);
-                } else {
-                    params.put("es_representante", "No");
-                }
-
-                // Imprimir los parámetros para depuración
-                for (Map.Entry<String, String> entry : params.entrySet()) {
-                    Log.d(TAG, "Param: " + entry.getKey() + " = " + entry.getValue());
-                }
-
-                return params;
+                return construirParametrosEncuesta(tipoPersona, esRepresentante, nombreEmpresa, nitEmpresa,
+                        idEmpresa, proyectoSenaId, requerimientoFortalecimiento, interes1Id, interes2Id,
+                        interes3Id, tipoPrograma, nombreAsociacion);
             }
         };
 
-        // Aumentar el tiempo de espera para la solicitud
         stringRequest.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(
-                15000, // 15 segundos de timeout
-                1, // Sin reintentos
-                1.0f));
+                15000, 1, 1.0f));
 
         queue.add(stringRequest);
     }
 
-    private void guardarEncuestaLocalmente(String tipoPersona, String esRepresentante,
-                                           String nombreEmpresa, String nitEmpresa,
-                                           int proyectoSenaId, int interes1Id,
-                                           int interes2Id, int interes3Id,
-                                           String tipoPrograma, String requerimientoFortalecimiento,
-                                           String idEmpresa) {
+    private Map<String, String> construirParametrosEncuesta(String tipoPersona, boolean esRepresentante,
+                                                            String nombreEmpresa, String nitEmpresa, String idEmpresa,
+                                                            int proyectoSenaId, String requerimientoFortalecimiento,
+                                                            int interes1Id, int interes2Id, int interes3Id,
+                                                            String tipoPrograma, String nombreAsociacion) {
+        Map<String, String> params = new HashMap<>();
+
+        // Parámetros básicos
+        params.put("cedula", numeroCedula);
+        params.put("idEvento", idEvento);
+        params.put("idSubevento", idSubevento);
+        params.put("tipo_persona", tipoPersona);
+
+        // Separar nombres y apellidos
+        if (nombreCompleto != null && !nombreCompleto.isEmpty()) {
+            int primerEspacio = nombreCompleto.indexOf(' ');
+            if (primerEspacio > 0) {
+                params.put("nombres", nombreCompleto.substring(0, primerEspacio));
+                params.put("apellidos", nombreCompleto.substring(primerEspacio + 1));
+            } else {
+                params.put("nombres", nombreCompleto);
+                params.put("apellidos", "");
+            }
+        } else {
+            params.put("nombres", "");
+            params.put("apellidos", "");
+        }
+
+        // Parámetros según tipo de persona
+        if (tipoPersona.equals("Juridica")) {
+            params.put("proyecto_sena", String.valueOf(proyectoSenaId));
+            params.put("requerimiento_fortalecimiento", requerimientoFortalecimiento);
+            params.put("interes1", "-1");
+            params.put("interes2", "-1");
+            params.put("interes3", "-1");
+            params.put("tipo_programa", "");
+            params.put("nombre_asociacion", "");
+
+            // Datos de empresa si es representante
+            if (esRepresentante) {
+                params.put("es_representante", "Si");
+                params.put("nombre_empresa", nombreEmpresa);
+                params.put("nit_empresa", nitEmpresa);
+                params.put("id_empresa", idEmpresa);
+            } else {
+                params.put("es_representante", "No");
+                params.put("nombre_empresa", "");
+                params.put("nit_empresa", "");
+                params.put("id_empresa", "-1");
+            }
+        } else {
+            // Persona Natural o Asociación Campesina
+            params.put("proyecto_sena", "-1");
+            params.put("requerimiento_fortalecimiento", "");
+            params.put("interes1", String.valueOf(interes1Id));
+            params.put("interes2", String.valueOf(interes2Id));
+            params.put("interes3", String.valueOf(interes3Id));
+            params.put("tipo_programa", tipoPrograma);
+            params.put("es_representante", "No");
+            params.put("nombre_empresa", "");
+            params.put("nit_empresa", "");
+            params.put("id_empresa", "-1");
+
+            // Nombre de asociación solo para asociaciones campesinas
+            params.put("nombre_asociacion", nombreAsociacion);
+        }
+
+        // Log para depuración
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            Log.d(TAG, "Param: " + entry.getKey() + " = " + entry.getValue());
+        }
+
+        return params;
+    }
+
+    private void mostrarResultadoGuardado(boolean success, String message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(success ? "Éxito" : "Error");
+        builder.setMessage(message);
+        builder.setPositiveButton("Aceptar", (dialog, which) -> {
+            if (success) {
+                // Sincronizar empresas si la encuesta se guardó exitosamente
+                sincronizarEmpresasYVolver();
+            } else {
+                volverAPantallaPrincipal();
+            }
+        });
+        builder.show();
+    }
+
+    private void mostrarErrorConexion() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Error de conexión");
+        builder.setMessage("No se pudo conectar con el servidor. Los datos se guardarán localmente y se enviarán cuando haya conexión.");
+        builder.setPositiveButton("Aceptar", (dialog, which) -> volverAPantallaPrincipal());
+        builder.show();
+    }
+
+    private void sincronizarEmpresasYVolver() {
+        if (empresaManager != null) {
+            empresaManager.sincronizarNuevasEmpresas(new EmpresaManager.OnSincronizacionCompletaListener() {
+                @Override
+                public void onSincronizacionCompleta(boolean exitoso, String mensaje) {
+                    Log.d(TAG, "Sincronización de empresas: " + mensaje);
+                    if (!exitoso) {
+                        Toast.makeText(EncuestasPosRegActivity.this,
+                                "Algunas empresas no se sincronizaron: " + mensaje,
+                                Toast.LENGTH_SHORT).show();
+                    }
+                    volverAPantallaPrincipal();
+                }
+            });
+        } else {
+            volverAPantallaPrincipal();
+        }
+    }
+
+    private void volverAPantallaPrincipal() {
+        Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+        finish();
+    }
+
+    private void guardarEncuestaLocalmente(String tipoPersona, String esRepresentante, String nombreEmpresa,
+                                           String nitEmpresa, int proyectoSenaId, int interes1Id, int interes2Id,
+                                           int interes3Id, String tipoPrograma, String requerimientoFortalecimiento,
+                                           String idEmpresa, String nombreAsociacion) {
         try {
-            // Crear un objeto JSON con todos los datos
             JSONObject jsonData = new JSONObject();
             jsonData.put("cedula", numeroCedula);
             jsonData.put("idEvento", idEvento);
             jsonData.put("idSubevento", idSubevento);
             jsonData.put("tipo_persona", tipoPersona);
 
+            // Separar nombres y apellidos
+            if (nombreCompleto != null && !nombreCompleto.isEmpty()) {
+                int primerEspacio = nombreCompleto.indexOf(' ');
+                if (primerEspacio > 0) {
+                    jsonData.put("nombres", nombreCompleto.substring(0, primerEspacio));
+                    jsonData.put("apellidos", nombreCompleto.substring(primerEspacio + 1));
+                } else {
+                    jsonData.put("nombres", nombreCompleto);
+                    jsonData.put("apellidos", "");
+                }
+            } else {
+                jsonData.put("nombres", "");
+                jsonData.put("apellidos", "");
+            }
+
             if (tipoPersona.equals("Juridica")) {
                 jsonData.put("proyecto_sena", proyectoSenaId);
                 jsonData.put("requerimiento_fortalecimiento", requerimientoFortalecimiento);
-            } else {
-                jsonData.put("proyecto_sena", -1);
-                jsonData.put("requerimiento_fortalecimiento", "");
-            }
-
-            // Intereses (solo para persona natural)
-            if (!tipoPersona.equals("Juridica")) {
-                jsonData.put("interes1", interes1Id);
-                jsonData.put("interes2", interes2Id);
-                jsonData.put("interes3", interes3Id);
-                jsonData.put("tipo_programa", tipoPrograma);
-            } else {
                 jsonData.put("interes1", -1);
                 jsonData.put("interes2", -1);
                 jsonData.put("interes3", -1);
                 jsonData.put("tipo_programa", "");
-            }
+                jsonData.put("nombre_asociacion", "");
 
-            if (esRepresentante.equals("Si") && tipoPersona.equals("Juridica")) {
-                jsonData.put("es_representante", "Si");
-                jsonData.put("nombre_empresa", nombreEmpresa);
-                jsonData.put("nit_empresa", nitEmpresa);
-
-                // Guardar el ID de la empresa
-                jsonData.put("id_empresa", idEmpresa);
+                if (esRepresentante.equals("Si")) {
+                    jsonData.put("es_representante", "Si");
+                    jsonData.put("nombre_empresa", nombreEmpresa);
+                    jsonData.put("nit_empresa", nitEmpresa);
+                    jsonData.put("id_empresa", idEmpresa);
+                } else {
+                    jsonData.put("es_representante", "No");
+                    jsonData.put("nombre_empresa", "");
+                    jsonData.put("nit_empresa", "");
+                    jsonData.put("id_empresa", "-1");
+                }
             } else {
+                jsonData.put("proyecto_sena", -1);
+                jsonData.put("requerimiento_fortalecimiento", "");
+                jsonData.put("interes1", interes1Id);
+                jsonData.put("interes2", interes2Id);
+                jsonData.put("interes3", interes3Id);
+                jsonData.put("tipo_programa", tipoPrograma);
                 jsonData.put("es_representante", "No");
+                jsonData.put("nombre_empresa", "");
+                jsonData.put("nit_empresa", "");
+                jsonData.put("id_empresa", "-1");
+                jsonData.put("nombre_asociacion", nombreAsociacion);
             }
 
-            // Usar el gestor de encuestas pendientes para guardar
+            // Guardar usando el gestor de encuestas pendientes
             EncuestasPendientesManager encuestasPendientesManager = new EncuestasPendientesManager(this);
             encuestasPendientesManager.guardarEncuestaPendiente(jsonData);
 
             Log.d(TAG, "Encuesta guardada localmente: " + jsonData.toString());
-            Toast.makeText(this, "Encuesta guardada localmente. Se sincronizará cuando haya conexión.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Encuesta guardada localmente. Se sincronizará cuando haya conexión.",
+                    Toast.LENGTH_SHORT).show();
 
         } catch (JSONException e) {
             Log.e(TAG, "Error al guardar encuesta localmente: " + e.getMessage());
@@ -1080,66 +948,47 @@ public class EncuestasPosRegActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Verificar si hay encuestas pendientes y hay conexión a internet
         EncuestasPendientesManager encuestasPendientesManager = new EncuestasPendientesManager(this);
+
         if (encuestasPendientesManager.hayEncuestasPendientes() && encuestasPendientesManager.hayConexionInternet()) {
-            // Mostrar alerta para sincronizar las encuestas pendientes
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Encuestas pendientes");
-            builder.setMessage("Hay encuestas pendientes de sincronización. ¿Desea sincronizarlas ahora?");
+            mostrarDialogoSincronizacion(encuestasPendientesManager);
+        } else {
+            mostrarDialogoSalirSinGuardar();
+        }
+    }
 
-            builder.setPositiveButton("Sincronizar", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    // Mostrar diálogo de progreso
-                    ProgressDialog progressDialog = new ProgressDialog(EncuestasPosRegActivity.this);
-                    progressDialog.setMessage("Sincronizando encuestas pendientes...");
-                    progressDialog.setCancelable(false);
-                    progressDialog.show();
+    private void mostrarDialogoSincronizacion(EncuestasPendientesManager encuestasPendientesManager) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Encuestas pendientes");
+        builder.setMessage("Hay encuestas pendientes de sincronización. ¿Desea sincronizarlas ahora?");
 
-                    // Sincronizar encuestas pendientes
-                    encuestasPendientesManager.sincronizarEncuestasPendientes(new EncuestasPendientesManager.OnSincronizacionCompletaListener() {
+        builder.setPositiveButton("Sincronizar", (dialog, which) -> {
+            ProgressDialog progressDialog = new ProgressDialog(EncuestasPosRegActivity.this);
+            progressDialog.setMessage("Sincronizando encuestas pendientes...");
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+
+            encuestasPendientesManager.sincronizarEncuestasPendientes(
+                    new EncuestasPendientesManager.OnSincronizacionCompletaListener() {
                         @Override
                         public void onSincronizacionCompleta(boolean exito, String mensaje) {
                             progressDialog.dismiss();
-
                             Toast.makeText(EncuestasPosRegActivity.this, mensaje, Toast.LENGTH_LONG).show();
-
-                            // Volver a la pantalla principal
-                            Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
-                            startActivity(intent);
-                            finish();
+                            volverAPantallaPrincipal();
                         }
                     });
-                }
-            });
+        });
 
-            builder.setNegativeButton("Más tarde", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    // Volver a la pantalla principal sin sincronizar
-                    Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
-                    startActivity(intent);
-                    finish();
-                }
-            });
+        builder.setNegativeButton("Más tarde", (dialog, which) -> volverAPantallaPrincipal());
+        builder.show();
+    }
 
-            builder.show();
-        } else {
-            // Mostrar alerta antes de salir sin guardar (comportamiento original)
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("¿Salir sin guardar?");
-            builder.setMessage("Si sale ahora, no se guardarán los datos de la encuesta.");
-            builder.setPositiveButton("Salir", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    Intent intent = new Intent(EncuestasPosRegActivity.this, AccionesMainActivity.class);
-                    startActivity(intent);
-                    finish();
-                }
-            });
-            builder.setNegativeButton("Cancelar", null);
-            builder.show();
-        }
+    private void mostrarDialogoSalirSinGuardar() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("¿Salir sin guardar?");
+        builder.setMessage("Si sale ahora, no se guardarán los datos de la encuesta.");
+        builder.setPositiveButton("Salir", (dialog, which) -> volverAPantallaPrincipal());
+        builder.setNegativeButton("Cancelar", null);
+        builder.show();
     }
 }

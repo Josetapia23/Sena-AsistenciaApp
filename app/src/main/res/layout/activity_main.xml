@@ -1,10 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".about">
+    tools:context=".MainActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -13,14 +14,13 @@
         <include
             android:id="@+id/my_toolbar"
             layout="@layout/toolbar"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
             android:padding="16dp"
@@ -29,7 +29,37 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/my_toolbar">
 
-            <!-- Tipo de Documento -->
+            <!-- Mensaje informativo sobre edicion -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:background="#E3F2FD"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="i"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="#1976D2"
+                    android:textColor="#FFFFFF" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Datos escaneados - Puede editar los campos que no estan bloqueados si hay errores"
+                    android:textColor="#1976D2"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Tipo de Documento (NO editable) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilTipoDocumento"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -46,14 +76,15 @@
                     android:focusable="false"
                     android:hint="Tipo de Documento"
                     android:inputType="none"
-                    android:text="CC" />
+                    android:text="CC"
+                    android:background="#F5F5F5" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Identificación -->
+            <!-- Identificacion (NO editable) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilDocumentID1"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -68,15 +99,16 @@
                     android:layout_marginLeft="10dp"
                     android:clickable="false"
                     android:focusable="false"
-                    android:hint="Número de Identificación"
-                    android:inputType="none" />
+                    android:hint="Numero de Identificacion"
+                    android:inputType="none"
+                    android:background="#F5F5F5" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Apellidos -->
+            <!-- Apellidos (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilApellidos"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -89,17 +121,17 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:clickable="false"
-                    android:focusable="false"
-                    android:hint="Apellidos"
-                    android:inputType="none" />
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:hint="Apellidos (Editable)"
+                    android:inputType="textPersonName" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Nombres -->
+            <!-- Nombres (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilNombres"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -112,17 +144,17 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:clickable="false"
-                    android:focusable="false"
-                    android:hint="Nombres"
-                    android:inputType="none" />
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:hint="Nombres (Editable)"
+                    android:inputType="textPersonName" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Fecha de Nacimiento -->
+            <!-- Fecha de Nacimiento (Solo DatePicker) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilFechaNacimiento"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -134,17 +166,20 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:clickable="false"
+                    android:clickable="true"
                     android:focusable="false"
-                    android:hint="Fecha de Nacimiento"
-                    android:inputType="none" />
+                    android:longClickable="false"
+                    android:cursorVisible="false"
+                    android:hint="Fecha de Nacimiento (Calendario)"
+                    android:inputType="none"
+                    android:drawableEnd="@android:drawable/ic_menu_my_calendar" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Edad -->
+            <!-- Edad (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilEdad"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -156,17 +191,17 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:clickable="false"
-                    android:focusable="false"
-                    android:hint="Edad"
-                    android:inputType="none" />
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:hint="Edad (Editable)"
+                    android:inputType="number" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Género -->
+            <!-- Genero (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilGenero"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -178,17 +213,17 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:clickable="false"
-                    android:focusable="false"
-                    android:hint="Género"
-                    android:inputType="none" />
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:hint="Genero (Masculino/Femenino)"
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Tipo de Sangre -->
+            <!-- Tipo de Sangre (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilTipoSangre"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -201,17 +236,17 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:clickable="false"
-                    android:focusable="false"
-                    android:hint="Tipo de Sangre"
-                    android:inputType="none" />
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:hint="Tipo de Sangre (O+, O-, A+, A-, B+, B-, AB+, AB-)"
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Nacionalidad -->
+            <!-- Nacionalidad (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilNacionalidad"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -226,7 +261,7 @@
                     android:layout_marginLeft="10dp"
                     android:clickable="true"
                     android:focusable="true"
-                    android:hint="Nacionalidad"
+                    android:hint="Nacionalidad (Editable)"
                     android:text="Colombiana"
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -235,7 +270,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Correo Electrónico -->
+            <!-- Correo Electronico (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tvCorreoEle1"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -248,7 +283,7 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:hint="Correo Electrónico"
+                    android:hint="Correo Electronico"
                     android:inputType="textEmailAddress"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -257,7 +292,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Teléfono de Contacto -->
+            <!-- Telefono de Contacto (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tvTelefono1"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -270,7 +305,7 @@
                     android:layout_width="320dp"
                     android:layout_height="60dp"
                     android:layout_marginLeft="10dp"
-                    android:hint="Teléfono de Contacto"
+                    android:hint="Telefono de Contacto"
                     android:inputType="number"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -278,7 +313,8 @@
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
-            <!-- Añadir después de otros campos en activity_main.xml -->
+
+            <!-- Departamento (NO editable) -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -302,14 +338,16 @@
                     android:clickable="false"
                     android:focusable="false"
                     android:hint="Departamento"
-                    android:text="ATLÁNTICO"
-                    android:inputType="none" />
+                    android:text="ATLANTICO"
+                    android:inputType="none"
+                    android:background="#F5F5F5" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
+            <!-- Municipio (Spinner) -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -330,23 +368,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
 
-            <!-- Dirección -->
+            <!-- Direccion (EDITABLE) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilDireccion"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="320dp"
-                android:layout_height="60dp"
+                android:layout_width="344dp"
+                android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/tvDireccion"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Dirección"
+                    android:hint="Direccion"
                     android:inputType="textMultiLine|textPostalAddress"
                     android:minLines="1"
                     android:maxLines="2"
-                    android:digits="abcdefghijklmnñopqrstuvwxyzABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789 -#.,:;/()áéíóúÁÉÍÓÚ"
+                    android:digits="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -#.,:;/()"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -354,7 +392,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="25dp" />
 
-            <!-- Botón Siguiente -->
+            <!-- Boton Registrar Asistencia -->
             <Button
                 android:id="@+id/Siguiente"
                 android:layout_width="268dp"
@@ -362,7 +400,9 @@
                 android:layout_gravity="center"
                 android:foregroundGravity="center"
                 android:gravity="center"
-                android:text="Registrar Asistencia" />
+                android:text="Registrar Asistencia"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
 

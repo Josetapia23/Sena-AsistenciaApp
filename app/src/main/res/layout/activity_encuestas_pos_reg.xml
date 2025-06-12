@@ -84,7 +84,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="25dp" />
 
-            <!-- Tipo de persona -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -92,32 +91,34 @@
                 android:textSize="16sp"
                 android:textStyle="bold"/>
 
-            <RadioGroup
-                android:id="@+id/rgTipoPersona"
+            <Spinner
+                android:id="@+id/spinnerTipoPersona"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginTop="8dp">
-
-                <RadioButton
-                    android:id="@+id/rbPersonaNatural"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Persona Natural"
-                    android:checked="true"
-                    android:layout_marginEnd="16dp"/>
-
-                <RadioButton
-                    android:id="@+id/rbPersonaJuridica"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Persona Jurídica" />
-            </RadioGroup>
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"/>
 
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="15dp" />
+            <!--nombre de -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilNombreAsociacion"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/etNombreAsociacion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Nombre de la Asociación Campesina"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
 
             <!-- Sección Persona Jurídica -->
             <LinearLayout
@@ -125,7 +126,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="match_parent"

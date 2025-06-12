@@ -1,18 +1,21 @@
 package com.example.cedula_scanner;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.StrictMode;
+import android.text.InputType;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -36,22 +39,23 @@ import com.google.zxing.integration.android.IntentResult;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
     public static final int CUSTOMIZED_REQUEST_CODE = 0x0000ffff;
 
     // Referencias a los campos de la UI
-    private EditText tvDocumentID, tvNombres, tvApellidos, tvGenero, tvFechaNacimiento;
-    private EditText tvTipoSangre, tvEdad, tvTipoDocumento, tvNacionalidad;
+    private EditText tvDocumentID, tvNombres, tvApellidos, tvFechaNacimiento;
+    private EditText tvEdad, tvTipoDocumento, tvNacionalidad;
     private EditText editCorreo, tvTelefono, tvDireccion, tvDepartamento;
+    private EditText tvGenero, tvTipoSangre; // Campos editables para género y tipo de sangre
 
     private Toolbar toolbar;
     private Button btnRegistrar;
@@ -81,6 +85,12 @@ public class MainActivity extends AppCompatActivity {
         tvDireccion = findViewById(R.id.tvDireccion);
         tvDepartamento = findViewById(R.id.tvDepartamento);
         spinnerMunicipio = findViewById(R.id.spinnerMunicipio);
+
+        // Hacer editables los campos que deben serlo
+        hacerCamposEditables();
+
+        // Configurar DatePicker para fecha de nacimiento
+        configurarDatePicker();
 
         // Inicializar el gestor de municipios
         municipiosManager = new MunicipiosManager(this);
@@ -113,6 +123,177 @@ public class MainActivity extends AppCompatActivity {
             parseDataCode(scanData);
         }
     }
+
+    private void hacerCamposEditables() {
+        // Hacer editables los campos que el usuario puede modificar
+        tvNombres.setClickable(true);
+        tvNombres.setFocusable(true);
+        tvNombres.setFocusableInTouchMode(true);
+        tvNombres.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+
+        tvApellidos.setClickable(true);
+        tvApellidos.setFocusable(true);
+        tvApellidos.setFocusableInTouchMode(true);
+        tvApellidos.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+
+        tvGenero.setClickable(true);
+        tvGenero.setFocusable(true);
+        tvGenero.setFocusableInTouchMode(true);
+        tvGenero.setInputType(InputType.TYPE_CLASS_TEXT);
+
+        tvTipoSangre.setClickable(true);
+        tvTipoSangre.setFocusable(true);
+        tvTipoSangre.setFocusableInTouchMode(true);
+        tvTipoSangre.setInputType(InputType.TYPE_CLASS_TEXT);
+
+        tvEdad.setClickable(true);
+        tvEdad.setFocusable(true);
+        tvEdad.setFocusableInTouchMode(true);
+        tvEdad.setInputType(InputType.TYPE_CLASS_NUMBER);
+
+        // Mantener algunos campos como no editables
+        tvDocumentID.setClickable(false);
+        tvDocumentID.setFocusable(false);
+        tvDocumentID.setInputType(InputType.TYPE_NULL);
+
+        tvTipoDocumento.setClickable(false);
+        tvTipoDocumento.setFocusable(false);
+        tvTipoDocumento.setInputType(InputType.TYPE_NULL);
+
+        tvDepartamento.setClickable(false);
+        tvDepartamento.setFocusable(false);
+        tvDepartamento.setInputType(InputType.TYPE_NULL);
+    }
+
+    // Método para configurar DatePicker en la fecha de nacimiento
+    private void configurarDatePicker() {
+        // Asegurar que el campo no sea directamente editable
+        tvFechaNacimiento.setInputType(InputType.TYPE_NULL);
+        tvFechaNacimiento.setFocusable(false);
+        tvFechaNacimiento.setFocusableInTouchMode(false);
+        tvFechaNacimiento.setCursorVisible(false);
+        tvFechaNacimiento.setKeyListener(null); // Esto desactiva completamente la entrada de teclado
+
+        tvFechaNacimiento.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Obtener la fecha actual como valores por defecto
+                final Calendar calendar = Calendar.getInstance();
+                int year = calendar.get(Calendar.YEAR);
+                int month = calendar.get(Calendar.MONTH);
+                int day = calendar.get(Calendar.DAY_OF_MONTH);
+
+                // Si ya hay una fecha en el campo, usarla como valor por defecto
+                String fechaActual = tvFechaNacimiento.getText().toString();
+                if (!fechaActual.isEmpty()) {
+                    try {
+                        // Parsear la fecha actual (formato dd/mm/yyyy)
+                        String[] partes = fechaActual.split("/");
+                        if (partes.length == 3) {
+                            day = Integer.parseInt(partes[0]);
+                            month = Integer.parseInt(partes[1]) - 1; // Restar 1 porque Calendar usa 0-11
+                            year = Integer.parseInt(partes[2]);
+                        }
+                    } catch (Exception e) {
+                        Log.e("DATE_PARSE", "Error al parsear fecha: " + e.getMessage());
+                    }
+                }
+
+                // Crear y mostrar el DatePickerDialog
+                DatePickerDialog datePickerDialog = new DatePickerDialog(
+                        MainActivity.this,
+                        new DatePickerDialog.OnDateSetListener() {
+                            @Override
+                            public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+                                // Formatear la fecha seleccionada (dd/mm/yyyy)
+                                String fechaFormateada = String.format(Locale.getDefault(),
+                                        "%02d/%02d/%04d", dayOfMonth, monthOfYear + 1, year);
+
+                                // Actualizar el campo con la fecha seleccionada
+                                tvFechaNacimiento.setText(fechaFormateada);
+
+                                // Recalcular la edad basada en la nueva fecha
+                                calcularEdad(year, monthOfYear, dayOfMonth);
+                            }
+                        }, year, month, day);
+
+                // Establecer la fecha máxima como la fecha actual (no fechas futuras)
+                datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+
+                // Mostrar el diálogo
+                datePickerDialog.show();
+            }
+        });
+    }
+
+    // Método para calcular la edad basada en la fecha seleccionada
+    private void calcularEdad(int year, int month, int day) {
+        Calendar dob = Calendar.getInstance();
+        Calendar today = Calendar.getInstance();
+
+        dob.set(year, month, day);
+
+        int age = today.get(Calendar.YEAR) - dob.get(Calendar.YEAR);
+        if (today.get(Calendar.DAY_OF_YEAR) < dob.get(Calendar.DAY_OF_YEAR)) {
+            age--;
+        }
+
+        // Actualizar el campo de edad
+        tvEdad.setText(String.valueOf(age));
+        this.edad = String.valueOf(age);
+    }
+
+    // Método para validar y normalizar el tipo de sangre
+    private String validarTipoSangre(String tipoSangre) {
+        // Tipos de sangre válidos
+        String[] tiposValidos = {"O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"};
+
+        // Normalizar entrada (eliminar espacios, convertir a mayúsculas)
+        String tipoNormalizado = tipoSangre.trim().toUpperCase();
+
+        // Verificar si es exactamente uno de los tipos válidos
+        for (String tipo : tiposValidos) {
+            if (tipo.equals(tipoNormalizado)) {
+                return tipo;
+            }
+        }
+
+        // Si no es válido, intentar corregir errores comunes
+        if (tipoNormalizado.contains("O") && tipoNormalizado.contains("+")) {
+            return "O+";
+        } else if (tipoNormalizado.contains("O") && tipoNormalizado.contains("-")) {
+            return "O-";
+        } else if (tipoNormalizado.contains("A") && !tipoNormalizado.contains("B") && tipoNormalizado.contains("+")) {
+            return "A+";
+        } else if (tipoNormalizado.contains("A") && !tipoNormalizado.contains("B") && tipoNormalizado.contains("-")) {
+            return "A-";
+        } else if (tipoNormalizado.contains("B") && !tipoNormalizado.contains("A") && tipoNormalizado.contains("+")) {
+            return "B+";
+        } else if (tipoNormalizado.contains("B") && !tipoNormalizado.contains("A") && tipoNormalizado.contains("-")) {
+            return "B-";
+        } else if (tipoNormalizado.contains("AB") && tipoNormalizado.contains("+")) {
+            return "AB+";
+        } else if (tipoNormalizado.contains("AB") && tipoNormalizado.contains("-")) {
+            return "AB-";
+        }
+
+        // Si no se puede corregir, retornar null para indicar error
+        return null;
+    }
+
+    // Método para validar y normalizar el género
+    private String validarGenero(String genero) {
+        String generoNormalizado = genero.trim().toLowerCase();
+
+        if (generoNormalizado.equals("m") || generoNormalizado.equals("masculino") || generoNormalizado.equals("1")) {
+            return "Masculino";
+        } else if (generoNormalizado.equals("f") || generoNormalizado.equals("femenino") || generoNormalizado.equals("2")) {
+            return "Femenino";
+        }
+
+        return genero; // Devolver original si no se puede normalizar
+    }
+
 
     public void setUpToolbar() {
         toolbar = findViewById(R.id.my_toolbar);
@@ -267,17 +448,43 @@ public class MainActivity extends AppCompatActivity {
 
                     primerApellido = splitStr[2 + corrimiento].substring(lastCapitalIndex);
                     segundoApellido = splitStr[3 + corrimiento];
-                    primerNombre = splitStr[4 + corrimiento];
 
-                    if (Character.isDigit(splitStr[5 + corrimiento].charAt(0))) {
-                        corrimiento--;
+                    // MODIFICACIÓN: Búsqueda mejorada para nombres largos
+                    // Si hay más partes en splitStr, podríamos tener nombres adicionales
+                    int indicePrimerNombre = 4 + corrimiento;
+                    primerNombre = splitStr[indicePrimerNombre];
+
+                    // Verificar si hay segundo nombre y cuántas partes podría tener
+                    if (indicePrimerNombre + 1 < splitStr.length) {
+                        // Si la siguiente parte comienza con un dígito, probablemente no es un nombre
+                        if (Character.isDigit(splitStr[indicePrimerNombre + 1].charAt(0))) {
+                            segundoNombre = "";
+                        } else {
+                            // Reconstruir segundo nombre a partir de todas las partes hasta encontrar la parte con sexo/fecha
+                            StringBuilder segundoNombreBuilder = new StringBuilder(splitStr[indicePrimerNombre + 1]);
+                            int j = indicePrimerNombre + 2;
+
+                            // Seguir añadiendo partes hasta encontrar la que contiene información de sexo/fecha
+                            while (j < splitStr.length &&
+                                    !splitStr[j].contains("M") && !splitStr[j].contains("F") &&
+                                    !splitStr[j].matches(".*\\d{8}.*")) {
+                                segundoNombreBuilder.append(" ").append(splitStr[j]);
+                                j++;
+                            }
+
+                            segundoNombre = segundoNombreBuilder.toString();
+
+                            // Ajustar el índice para la extracción de sexo y fecha
+                            sexo = splitStr[j].contains("M") ? "Masculino" : "Femenino";
+                            rh = obtenerTipoSangre(barcode, splitStr, j);
+                            fechaNacimiento = splitStr[j].substring(2, 10);
+                        }
                     } else {
-                        segundoNombre = splitStr[5 + corrimiento];
+                        segundoNombre = "";
+                        sexo = splitStr[6 + corrimiento].contains("M") ? "Masculino" : "Femenino";
+                        rh = obtenerTipoSangre(barcode, splitStr, 6 + corrimiento);
+                        fechaNacimiento = splitStr[6 + corrimiento].substring(2, 10);
                     }
-
-                    sexo = splitStr[6 + corrimiento].contains("M") ? "Masculino" : "Femenino";
-                    rh = obtenerTipoSangre(barcode, splitStr, 6 + corrimiento);
-                    fechaNacimiento = splitStr[6 + corrimiento].substring(2, 10);
                 } else {
                     // Formato nuevo de cédula (con PubDSK)
                     int corrimiento = 0;
@@ -344,10 +551,25 @@ public class MainActivity extends AppCompatActivity {
                             fechaNacimiento = splitStr[6 + corrimiento].substring(2, 10);
                         } else { // DOS APELLIDOS DOS NOMBRES
                             primerNombre = splitStr[5 + corrimiento];
-                            segundoNombre = splitStr[6 + corrimiento];
-                            sexo = splitStr[7 + corrimiento].contains("M") ? "Masculino" : "Femenino";
-                            rh = obtenerTipoSangre(barcode, splitStr, 7 + corrimiento);
-                            fechaNacimiento = splitStr[7 + corrimiento].substring(2, 10);
+
+                            // MODIFICACIÓN: Búsqueda mejorada para nombres largos en formato PubDSK
+                            StringBuilder segundoNombreBuilder = new StringBuilder(splitStr[6 + corrimiento]);
+                            int j = 7 + corrimiento;
+
+                            // Seguir añadiendo partes hasta encontrar la que contiene información de sexo/fecha
+                            while (j < splitStr.length &&
+                                    !splitStr[j].contains("M") && !splitStr[j].contains("F") &&
+                                    !splitStr[j].matches(".*\\d{8}.*")) {
+                                segundoNombreBuilder.append(" ").append(splitStr[j]);
+                                j++;
+                            }
+
+                            segundoNombre = segundoNombreBuilder.toString();
+
+                            // Ajustar el índice para la extracción de sexo y fecha
+                            sexo = splitStr[j].contains("M") ? "Masculino" : "Femenino";
+                            rh = obtenerTipoSangre(barcode, splitStr, j);
+                            fechaNacimiento = splitStr[j].substring(2, 10);
                         }
                     }
                 }
@@ -402,7 +624,6 @@ public class MainActivity extends AppCompatActivity {
 
                 // Formatear fecha para mostrar
                 String fechaMostrar = "";
-                String fechaParaServidor = fechaNacimiento; // Guardar el valor original para cálculos
 
                 if (fechaNacimiento != null && fechaNacimiento.length() >= 8) {
                     try {
@@ -423,9 +644,6 @@ public class MainActivity extends AppCompatActivity {
                         // Formato para mostrar al usuario (dd/mm/yyyy)
                         fechaMostrar = dia + "/" + mes + "/" + anio;
 
-                        // Para enviar al servidor
-                        fechaParaServidor = fechaMostrar;
-
                         Log.d("FECHA_DEBUG", "Fecha original: " + fechaNacimiento);
                         Log.d("FECHA_DEBUG", "Fecha formateada: " + fechaMostrar);
                     } catch (Exception e) {
@@ -445,16 +663,16 @@ public class MainActivity extends AppCompatActivity {
                     apellidosCompletos += " " + segundoApellido;
                 }
 
-                // Actualizar la UI con los datos extraídos
-                tvDocumentID.setText(cedula);
-                tvNombres.setText(nombresCompletos);
-                tvApellidos.setText(apellidosCompletos);
-                tvGenero.setText(sexo);
-                tvFechaNacimiento.setText(fechaMostrar);
-                tvTipoSangre.setText(rh);
-                tvEdad.setText(edad);
-                tvTipoDocumento.setText(tipoDocumento); // Ahora usamos el tipo detectado
-                tvNacionalidad.setText("COLOMBIANA"); // Por defecto
+                // Actualizar la UI con los datos extraídos (con verificación de nulos)
+                if (tvDocumentID != null) tvDocumentID.setText(cedula);
+                if (tvNombres != null) tvNombres.setText(nombresCompletos);
+                if (tvApellidos != null) tvApellidos.setText(apellidosCompletos);
+                if (tvGenero != null) tvGenero.setText(sexo);
+                if (tvFechaNacimiento != null) tvFechaNacimiento.setText(fechaMostrar);
+                if (tvTipoSangre != null) tvTipoSangre.setText(rh);
+                if (tvEdad != null) tvEdad.setText(edad);
+                if (tvTipoDocumento != null) tvTipoDocumento.setText(tipoDocumento);
+                if (tvNacionalidad != null) tvNacionalidad.setText("COLOMBIANA");
 
             } catch (Exception e) {
                 Log.e("PARSE_ERROR", "Error procesando código de barras: " + e.getMessage());
@@ -588,11 +806,6 @@ public class MainActivity extends AppCompatActivity {
         return String.valueOf(letraSangre) + signo;
     }
 
-    // Método auxiliar para verificar si un carácter es una letra de tipo de sangre
-    private boolean esLetraTipoSangre(char c) {
-        return c == 'O' || c == 'A' || c == 'B';
-    }
-
     private void insertarAsistencia(String idEvento) {
         // Obtener también el ID del subevento desde SharedPreferences
         SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
@@ -629,15 +842,25 @@ public class MainActivity extends AppCompatActivity {
             municipio = "";
         }
 
-        // Validar que se haya seleccionado un municipio válido
-        if (municipio.isEmpty() || municipio.equals("Seleccione municipio")) {
-            Toast.makeText(this, "Por favor seleccione un municipio", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         // Validaciones
         if (identificacion.isEmpty()) {
             Toast.makeText(this, "Por favor escanee una cédula primero", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (genero.isEmpty()) {
+            tvGenero.setError("Ingrese un género");
+            return;
+        }
+
+        if (tipoSangre.isEmpty()) {
+            tvTipoSangre.setError("Ingrese un tipo de sangre");
+            return;
+        }
+
+        // Validar que se haya seleccionado un municipio válido
+        if (municipio.isEmpty() || municipio.equals("Seleccione municipio")) {
+            Toast.makeText(this, "Por favor seleccione un municipio", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -676,7 +899,6 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(String response) {
                         progressDialog.dismiss();
-                        // En el método onResponse del insertarAsistencia
                         try {
                             JSONObject jsonResponse = new JSONObject(response);
                             boolean success = jsonResponse.getBoolean("success");
@@ -711,7 +933,6 @@ public class MainActivity extends AppCompatActivity {
                                         intent.putExtra("numero_cedula", identificacion);
 
                                         // Pasar también idEvento e idSubevento (aunque ya están en SharedPreferences)
-                                        // esto es para garantizar que siempre estén disponibles
                                         SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
                                         String idEvento = prefs.getString("idEvento", "");
                                         String idSubevento = prefs.getString("idSubevento", "");
